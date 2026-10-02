@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Trade Bot — Verified AI trading. Your account, your keys.</title>
+<meta name="description" content="ATB is the BNB Chain utility token behind AI Trade Bot: AI trading agents that prove their track record on-chain, run under a daily cap and a kill switch, and never touch your funds.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F9FC; --ink:#0B1220; --ink-2:#475569; --line:#E2E8F0; --panel:#FFFFFF;
+  --accent:#16A34A; --accent-bg:#DCFCE7; --accent-ink:#052E16; --danger:#DC2626; --danger-bg:#FEE2E2;
+  --dark:#0B1220; --dark-ink:#E5EDF5;
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B1220; --ink:#E5EDF5; --ink-2:#94A3B8; --line:#1E293B; --panel:#111A2E;
+  --accent:#22C55E; --accent-bg:#0F2E1C; --accent-ink:#BBF7D0; --danger:#F87171; --danger-bg:#3A1414;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B1220; --ink:#E5EDF5; --ink-2:#94A3B8; --line:#1E293B; --panel:#111A2E;
+  --accent:#22C55E; --accent-bg:#0F2E1C; --accent-ink:#BBF7D0; --danger:#F87171; --danger-bg:#3A1414;
+}
+*{box-sizing:inherit;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-weight:800;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4vw,40px);margin-bottom:12px}
+.sub{color:var(--ink-2);max-width:40em;margin-bottom:36px;font-size:18px}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+a{color:inherit}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;text-decoration:none}
+.brand img{width:32px;height:32px;border-radius:8px}
+.brand small{font-weight:600;color:var(--ink-2);font-size:13px;margin-left:2px}
+nav .links{display:flex;gap:22px;align-items:center}
+nav .links a{text-decoration:none;font-weight:500;color:var(--ink-2)}
+nav .links a:hover{color:var(--ink)}
+@media(max-width:760px){nav .links a{display:none}}
+
+.hero{padding:48px 0 40px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+@media(max-width:860px){.hero{grid-template-columns:1fr;gap:28px}}
+.hero h1{font-size:clamp(38px,6vw,64px);margin-bottom:20px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p.lead{font-size:clamp(17px,1.6vw,20px);color:var(--ink-2);max-width:34em;margin-bottom:28px}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:600;border:2px solid var(--ink);color:var(--ink);background:transparent}
+.btn.fill{background:var(--ink);color:var(--bg)}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.trust{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:22px;font-size:14px;color:var(--ink-2)}
+.trust span::before{content:"✓";color:var(--accent);font-weight:800;margin-right:6px}
+
+/* live on-chain panel */
+.live{background:var(--dark);color:var(--dark-ink);border-radius:14px;padding:22px 22px 18px;position:relative;overflow:hidden}
+.live .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:#94A3B8;margin-bottom:14px;white-space:nowrap}
+.live .hd .r{display:flex;align-items:center;gap:8px}
+.live .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C55E;margin-right:7px;box-shadow:0 0 0 0 rgba(34,197,94,.6)}
+@media (prefers-reduced-motion:no-preference){.live.on .dot{animation:pulse 1.8s infinite}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}100%{box-shadow:0 0 0 10px rgba(34,197,94,0)}}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat{background:#111A2E;border:1px solid #1E293B;border-radius:10px;padding:14px}
+.stat .k{font-size:12px;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em}
+.stat .v{font-family:"JetBrains Mono",monospace;font-size:clamp(22px,2.6vw,30px);font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:.5em;color:#94A3B8;margin-left:4px}
+.live .ft{margin-top:14px;font-size:12px;color:#94A3B8;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.live .ft a{color:#CBD5E1}
+.live .badge{background:#F59E0B;color:#1E1400;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.04em}
+.feed{margin-top:14px;border-top:1px solid #1E293B;padding-top:10px;font-family:"JetBrains Mono",monospace;font-size:12px;color:#CBD5E1;display:grid;gap:6px}
+.feed div{display:grid;grid-template-columns:auto 1fr auto;gap:10px;white-space:nowrap;overflow:hidden}
+.feed .h{color:#22C55E;overflow:hidden;text-overflow:ellipsis}
+
+section{padding:64px 0;border-top:1px solid var(--line)}
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:800px){.pillars{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px}
+.card .n{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--accent);font-weight:500;letter-spacing:.08em}
+.card h3{font-size:20px;margin:8px 0 8px}
+.card p{color:var(--ink-2);font-size:15.5px}
+.card .fn{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink-2);margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);word-break:break-all}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:760px){.vs{grid-template-columns:1fr}}
+.vs .card h3{display:flex;align-items:center;gap:8px}
+.vs ul{padding-left:0;list-style:none;display:grid;gap:10px;margin-top:12px;color:var(--ink-2);font-size:15.5px}
+.vs li::before{content:"✕";color:var(--danger);font-weight:800;margin-right:8px}
+.vs .good li::before{content:"✓";color:var(--accent)}
+.vs .bad{border-color:color-mix(in srgb,var(--danger) 30%,var(--line))}
+.vs .good{border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:860px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.steps{grid-template-columns:1fr}}
+.step{position:relative;padding-top:8px}
+.step::before{counter-increment:s;content:"0" counter(s);font-family:"JetBrains Mono",monospace;color:var(--accent);font-size:13px;font-weight:500}
+.step h3{font-size:17px;margin:6px 0}
+.step p{color:var(--ink-2);font-size:15px}
+
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch}
+@media(max-width:800px){.tiers{grid-template-columns:1fr}}
+.tier{display:flex;flex-direction:column}
+.tier.hi{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.tier .price{font-size:40px;font-weight:800;letter-spacing:-.03em;margin:6px 0 2px}
+.tier .price small{font-size:15px;font-weight:500;color:var(--ink-2)}
+.tier ul{list-style:none;padding:0;margin:16px 0 20px;display:grid;gap:8px;color:var(--ink-2);font-size:15px;flex:1}
+.tier li::before{content:"✓";color:var(--accent);font-weight:800;margin-right:8px}
+.tier .btn{justify-content:center}
+.note{color:var(--ink-2);font-size:14.5px;margin-top:18px;max-width:60em}
+
+.bar{display:flex;height:36px;border-radius:8px;overflow:hidden;margin:18px 0 14px}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 18px;font-size:15px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:32px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink-2);font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+td.mono{font-size:13.5px}
+pre{background:var(--dark);color:var(--dark-ink);border-radius:10px;padding:16px;font-size:13px;overflow:auto;line-height:1.55}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--accent-bg);color:var(--accent-ink);border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:600}
+
+ol.road{list-style:none;padding:0}
+ol.road li{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+ol.road li b{font-family:"JetBrains Mono",monospace;font-weight:500}
+ol.road li:first-child{color:var(--ink)} ol.road li:not(:first-child){color:var(--ink-2)}
+@media(max-width:520px){ol.road li{grid-template-columns:1fr;gap:4px}}
+
+footer{padding:36px 0 56px;color:var(--ink-2);font-size:14px;border-top:1px solid var(--line)}
+footer p{max-width:70em;margin-bottom:10px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="brand" href="#"><img src="logo.svg" alt=""> AI Trade Bot <small>ATB</small></a>
+  <div class="links">
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#token">Token</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#docs">Docs</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div>
+    <h1>Verified AI trading.<br><em>Your account, your keys.</em></h1>
+    <p class="lead">Every AI trading bot shows you screenshots. Ours writes every trade to BNB Chain, wins and losses alike, runs under a daily spend cap and a kill switch, and never holds your money.</p>
+    <div class="cta">
+      <a class="btn fill" href="#how">See how it works</a>
+      <a class="btn" href="#token">Read the tokenomics</a>
+    </div>
+    <div class="trust">
+      <span>No pooled funds</span>
+      <span>No public sale</span>
+      <span>Fixed supply, no mint</span>
+      <span>Losses on-chain too</span>
+      <span>Open source, audited before mainnet</span>
+    </div>
+  </div>
+
+  <div class="live testnet" id="live">
+    <div class="hd"><span><i class="dot"></i><span>On-chain, right now</span></span><span class="r"><span class="badge" id="live-badge">TESTNET</span><span id="live-net" class="mono">BNB Chain</span></span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Bots registered</div><div class="v" id="s-agents">—</div></div>
+      <div class="stat"><div class="k">Trades anchored</div><div class="v" id="s-anchors">—</div></div>
+      <div class="stat"><div class="k">ATB burned</div><div class="v" id="s-burned">—<small>ATB</small></div></div>
+      <div class="stat"><div class="k">Access fees paid</div><div class="v" id="s-access">—<small>ATB</small></div></div>
+    </div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+    <div class="ft" style="margin-top:10px"><span>Counters are facts about the past, not a promise about the future. Trading can lose money.</span></div>
+    <div class="ft"><span id="live-msg">Contract not deployed yet. Numbers appear the moment the testnet contract goes live.</span><a id="live-link" href="#" class="hidden" target="_blank" rel="noopener">View on BscScan →</a></div>
+  </div>
+</header>
+
+<section id="how">
+  <h2>Three things no other trading bot gives you</h2>
+  <p class="sub">All three live inside the ATB token contract on BNB Chain. Anyone can read them. Nobody can fake them.</p>
+  <div class="pillars">
+    <div class="card"><div class="n">01 · PROOF</div><h3>A track record you can't photoshop</h3><p>Each time the bot fills an order, it anchors a hash of the trade record on-chain, including the losing ones. Backtests can be tuned; a timestamped chain of hashes can't.</p><div class="fn">anchorTrade(agent, logHash) · reputation(agent)</div></div>
+    <div class="card"><div class="n">02 · GUARD</div><h3>A blast radius, not a blank check</h3><p>Registered bot wallets get a 24-hour spend cap and an operator kill switch. If the bot is hijacked or misfires, you lose at most one day's cap, then it's frozen.</p><div class="fn">setDailyLimit(agent, limit) · freezeAgent(agent)</div></div>
+    <div class="card"><div class="n">03 · BOND</div><h3>Skin in the game, on-chain</h3><p>Whoever runs a bot locks an ATB bond. Misbehave and an arbiter slashes it, burned forever, with the reason written to the chain. Report a vulnerability and get paid from escrowed bounties.</p><div class="fn">registerAgent(...) · slash(agent, amount, reason) · postBounty(...)</div></div>
+  </div>
+</section>
+
+<section id="notafund">
+  <h2>This is not a fund. On purpose.</h2>
+  <p class="sub">Pooled-money "AI trading" schemes are where the scams live, and where the regulators look. We built the opposite.</p>
+  <div class="vs">
+    <div class="card bad"><h3>Typical "AI trading bot"</h3><ul>
+      <li>Send us your money, we trade it for you</li>
+      <li>Performance = screenshots in a Telegram group</li>
+      <li>Guaranteed monthly returns</li>
+      <li>Withdrawals "processing"</li>
+    </ul></div>
+    <div class="card good"><h3>AI Trade Bot</h3><ul>
+      <li>Runs on your own exchange account with your own API keys, withdrawal permission off</li>
+      <li>Performance = hashes on BNB Chain you can verify yourself</li>
+      <li>No return promises. Ever. Trading loses money sometimes and the chain will show that too</li>
+      <li>Nothing to withdraw from us, because we never held it</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>How a user actually runs it</h2>
+  <div class="steps">
+    <div class="step"><h3>Connect your exchange</h3><p>Binance, with a trade-only API key. Withdrawal permission stays off, always.</p></div>
+    <div class="step"><h3>Pick a verified bot</h3><p>Browse bots by on-chain reputation: bond size, days live, trades anchored, slashes.</p></div>
+    <div class="step"><h3>Pay access in ATB</h3><p>USD-priced plans, paid in ATB. Half of every payment is burned, half funds audits and infrastructure.</p></div>
+    <div class="step"><h3>Watch it prove itself</h3><p>Every fill lands in your dashboard and on the chain. Hit the kill switch any time.</p></div>
+  </div>
+</section>
+
+<section id="pricing">
+  <h2>Pricing</h2>
+  <p class="sub">Software subscription, priced in USD, paid in ATB at the current rate. Cancel any time. Your funds never move.</p>
+  <div class="tiers">
+    <div class="card tier"><h3>Free</h3><div class="price">$0</div><ul>
+      <li>Dashboard and bot leaderboard</li><li>Backtests and crash/pump benchmarks</li><li>Read every bot's on-chain track record</li></ul>
+      <a class="btn" href="#docs">Open the dashboard</a></div>
+    <div class="card tier hi"><h3>Standard</h3><div class="price">$29<small>/month</small></div><ul>
+      <li>Run 1 crypto bot</li><li>Telegram and web push alerts</li><li>Stop-loss and wallet guard</li><li>Daily cap and kill switch</li></ul>
+      <a class="btn fill" href="#docs">Start with Standard</a></div>
+    <div class="card tier"><h3>Pro</h3><div class="price">$99<small>/month</small></div><ul>
+      <li>Unlimited crypto bots</li><li>Every strategy, early access to new ones</li><li>Priority support</li></ul>
+      <a class="btn" href="#docs">Go Pro</a></div>
+  </div>
+  <p class="note">Annual billing: pay for 10 months, get 12. Bot operators who publish their own bot also lock a 1,000 ATB bond and pay a 100 ATB registration fee. Plan IDs are recorded on-chain in the AccessPaid event. Paid plans cover crypto only.</p>
+</section>
+
+<section id="token">
+  <h2>Tokenomics that are enforced, not promised</h2>
+  <p class="sub">1,000,000,000 ATB. No mint function. No public sale. Every lock-up is executed inside the deployment transaction, then the vesting admin key is burned.</p>
+  <div class="bar" aria-hidden="true">
+    <div style="width:20%;background:#0B1220"></div>
+    <div style="width:35%;background:#16A34A"></div>
+    <div style="width:15%;background:#22C55E"></div>
+    <div style="width:15%;background:#0EA5E9"></div>
+    <div style="width:15%;background:#64748B"></div>
+  </div>
+  <div class="legend">
+    <div><i style="background:#0B1220"></i><span>Liquidity 20% · LP locked 12 months</span></div>
+    <div><i style="background:#16A34A"></i><span>Community &amp; bounties 35% · 36-month linear</span></div>
+    <div><i style="background:#22C55E"></i><span>Ecosystem &amp; partners 15% · 6-month cliff, 30 months</span></div>
+    <div><i style="background:#0EA5E9"></i><span>Team 15% · 5% at launch, rest 12-month cliff, 48 months</span></div>
+    <div><i style="background:#64748B"></i><span>Foundation &amp; ops 15% · 6-month cliff, 30 months</span></div>
+  </div>
+  <div class="chips">
+    <span class="chip">Public sale: 0%</span>
+    <span class="chip">Circulating at launch: 20.75%</span>
+    <span class="chip">Team liquid at launch: 0.75% of supply</span>
+    <span class="chip">Fully vested: 48 months</span>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Where demand comes from</h3>
+      <table>
+        <thead><tr><th>Flow</th><th>Burned</th><th>Treasury</th></tr></thead>
+        <tbody>
+          <tr><td>Bot access fees</td><td>50%</td><td>50%</td></tr>
+          <tr><td>Bot registration fee (100 ATB)</td><td>50%</td><td>50%</td></tr>
+          <tr><td>Bounty payout fee (2%)</td><td>50%</td><td>50%</td></tr>
+          <tr><td>Slashed bonds</td><td>100%</td><td>0%</td></tr>
+          <tr><td>Operator bonds (min 1,000 ATB)</td><td colspan="2">Locked while the bot is live</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Hard caps in the code</h3>
+      <table>
+        <thead><tr><th>Constant</th><th>Value</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">MIN_FEE_BURN_BPS</td><td>3000</td><td>Owner can raise the burn share, never below 30%</td></tr>
+          <tr><td class="mono">MAX_BOUNTY_FEE_BPS</td><td>500</td><td>Bounty fee can never exceed 5%</td></tr>
+          <tr><td class="mono">MAX_REGISTRATION_FEE</td><td>1,000 ATB</td><td>Registration fee ceiling</td></tr>
+          <tr><td class="mono">UNBOND_DELAY</td><td>7 days</td><td>Dispute window before a bond is returned</td></tr>
+        </tbody>
+      </table>
+      <p class="note">There is no mint, no blacklist, no per-address tax and no transfer restriction other than the agent rules an operator opts into.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px">Verify it yourself</h3>
+  <pre class="mono">token.totalSupply()          == 1_000_000_000e18   <span style="color:#94A3B8">// and no mint() exists</span>
+vesting.totalLocked()        == 792_500_000e18     <span style="color:#94A3B8">// at TGE</span>
+vesting.owner()              == 0x0                <span style="color:#94A3B8">// renounced in the deploy tx</span>
+token.MIN_FEE_BURN_BPS()     == 3000
+token.MAX_BOUNTY_FEE_BPS()   == 500
+token.MAX_REGISTRATION_FEE() == 1_000e18</pre>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap</h2>
+  <ol class="road">
+    <li><b>2026 Q4</b><span>BSC testnet → external audit → BNB mainnet, PancakeSwap pool with 12-month LP lock, CoinMarketCap / CoinGecko listing. First quant bot starts anchoring live trades.</span></li>
+    <li><b>2027 Q1</b><span>Bot SDK (Python / TypeScript): register, anchorTrade, payAccess, freeze. Public bot leaderboard.</span></li>
+    <li><b>2027 Q2</b><span>Arbiter multisig → dispute DAO. Pause key renounced after audit.</span></li>
+    <li><b>2027 Q3</b><span>Third-party bots onboard with bonds. Verification API for other platforms.</span></li>
+  </ol>
+</section>
+
+<section id="docs">
+  <h2>Docs and code</h2>
+  <div class="cta">
+    <a class="btn fill" href="https://github.com/aitradebot061-wq/aitradebot/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noopener">Whitepaper</a>
+    <a class="btn" href="https://github.com/aitradebot061-wq/aitradebot/blob/main/docs/TOKENOMICS.md" target="_blank" rel="noopener">Tokenomics spec</a>
+    <a class="btn" href="https://github.com/aitradebot061-wq/aitradebot" target="_blank" rel="noopener">GitHub</a>
+    <a class="btn" href="https://testnet.bscscan.com/address/0x3c803be1699A6bC105ce45506A54fA91adf9C217#code" id="docs-bscscan" target="_blank" rel="noopener">BscScan</a>
+    <a class="btn" href="#">X</a>
+    <a class="btn" href="#">Telegram</a>
+  </div>
+</section>
+
+<footer>
+  <p>ATB is a utility token used for bot access, operator bonds and security bounties. It carries no profit share, no dividend and no promise of return. AI Trade Bot never takes custody of user funds; bots execute on the user's own exchange account. Trading involves risk of loss.</p>
+  <p>The contract is unaudited until the audit report is published on this page. Participants are responsible for compliance with the laws of their jurisdiction, including Korea's Virtual Asset User Protection Act.</p>
+  <p>© 2026 AI Trade Bot</p>
+</footer>
+</div>
+
+<script>
+/* ---------------- config: fill after deployment ---------------- */
+var ATB = {
+  token: "0x3c803be1699A6bC105ce45506A54fA91adf9C217",  // AITradeBot (BSC testnet)
+  rpc:   "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+  chain: 97,                                   // 97 = BSC testnet, 56 = BSC mainnet
+  explorer: "https://testnet.bscscan.com"
+};
+
+/* ---------------- live on-chain stats (raw JSON-RPC, no library) ---------------- */
+var SEL = { totalBurned:"0xd89135cd", totalAccessPaid:"0xd34a3052", agentCount:"0xb7dc1284", totalAnchors:"0x9ffb4635" };
+var TOPIC_ANCHOR = "0x34bf3df7ae258af28d69cf54076a2d22c68a6a140644530c8708ae0556745835"; // keccak256("TradeAnchored(address,uint256,bytes32,uint256)")
+function rpc(method, params){
+  return fetch(ATB.rpc, {method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({jsonrpc:"2.0", id:1, method:method, params:params})})
+    .then(function(r){ return r.json(); }).then(function(j){ if (j.error) throw j.error; return j.result; });
+}
+function call(sel){ return rpc("eth_call", [{to: ATB.token, data: sel}, "latest"]).then(function(h){ return BigInt(h); }); }
+function fmtInt(n){ return Number(n).toLocaleString("en-US"); }
+function fmtTok(n){ var v = Number(n / 10n**18n); return v >= 1e6 ? (v/1e6).toFixed(2)+"M" : fmtInt(v); }
+function setV(id, text, unit){ var el = document.getElementById(id); el.textContent = text; if (unit){ var s = document.createElement("small"); s.textContent = unit; el.appendChild(s); } }
+
+function loadLive(){
+  if (!ATB.token) return;
+  var live = document.getElementById("live");
+  var link = document.getElementById("live-link");
+  link.href = ATB.explorer + "/address/" + ATB.token; link.classList.remove("hidden");
+  document.getElementById("docs-bscscan").href = link.href;
+  document.getElementById("live-net").textContent = ATB.chain === 56 ? "BNB Chain" : "BSC Testnet";
+  if (ATB.chain === 56) { document.getElementById("live-badge").classList.add("hidden"); live.classList.remove("testnet"); }
+  Promise.all([call(SEL.agentCount), call(SEL.totalAnchors), call(SEL.totalBurned), call(SEL.totalAccessPaid)])
+  .then(function(r){
+    setV("s-agents", fmtInt(r[0])); setV("s-anchors", fmtInt(r[1]));
+    setV("s-burned", fmtTok(r[2]), "ATB"); setV("s-access", fmtTok(r[3]), "ATB");
+    live.classList.add("on");
+    document.getElementById("live-msg").textContent = "Updated " + new Date().toLocaleTimeString();
+    return rpc("eth_blockNumber", []);
+  })
+  .then(function(bn){
+    var from = "0x" + Math.max(0, parseInt(bn,16) - 5000).toString(16);
+    return rpc("eth_getLogs", [{address: ATB.token, fromBlock: from, toBlock: "latest",
+      topics: [TOPIC_ANCHOR]}]).catch(function(){ return []; });
+  })
+  .then(function(logs){
+    var feed = document.getElementById("feed"); feed.innerHTML = "";
+    (logs || []).slice(-4).reverse().forEach(function(lg){
+      var agent = "0x" + lg.topics[1].slice(26), seq = parseInt(lg.topics[2],16), hash = lg.data.slice(0,66);
+      var row = document.createElement("div");
+      row.innerHTML = "<span>#"+seq+"</span><span class='h'>"+hash+"</span><span>"+agent.slice(0,6)+"…"+agent.slice(-4)+"</span>";
+      feed.appendChild(row);
+    });
+  })
+  .catch(function(e){ document.getElementById("live-msg").textContent = "RPC error: " + (e.message || e); });
+}
+loadLive();
+if (ATB.token) setInterval(loadLive, 30000);
+</script>
+</body>
+</html>

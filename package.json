@@ -1,0 +1,24 @@
+{
+  "name": "aitradebot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network bsc",
+    "release:testnet": "hardhat run scripts/release.js --network bscTestnet",
+    "release:mainnet": "hardhat run scripts/release.js --network bsc",
+    "agent:register:testnet": "hardhat run scripts/register-agent.js --network bscTestnet",
+    "agent:register:mainnet": "hardhat run scripts/register-agent.js --network bsc",
+    "wallet:testnet": "hardhat run scripts/wallet.js --network bscTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}

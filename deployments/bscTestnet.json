@@ -1,0 +1,80 @@
+{
+  "network": "bscTestnet",
+  "chainId": 97,
+  "token": "0x3c803be1699A6bC105ce45506A54fA91adf9C217",
+  "vesting": "0x7667027c4BE9607BF17bbB52E3ffFcC2587cD5DA",
+  "treasury": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+  "tge": 1790789602,
+  "allocations": [
+    {
+      "label": "Liquidity (PancakeSwap LP)",
+      "env": "LIQUIDITY_ADDRESS",
+      "pct": 20,
+      "tge": 100,
+      "cliff": 0,
+      "duration": 0,
+      "beneficiary": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+      "amount": "200000000",
+      "unlockedAtTge": "200000000",
+      "vested": "0"
+    },
+    {
+      "label": "Community & Bounty Pool",
+      "env": "COMMUNITY_ADDRESS",
+      "pct": 35,
+      "tge": 0,
+      "cliff": 0,
+      "duration": 36,
+      "beneficiary": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+      "amount": "350000000",
+      "unlockedAtTge": "0",
+      "vested": "350000000"
+    },
+    {
+      "label": "Ecosystem & Partners",
+      "env": "ECOSYSTEM_ADDRESS",
+      "pct": 15,
+      "tge": 0,
+      "cliff": 6,
+      "duration": 30,
+      "beneficiary": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+      "amount": "150000000",
+      "unlockedAtTge": "0",
+      "vested": "150000000"
+    },
+    {
+      "label": "Team",
+      "env": "TEAM_ADDRESS",
+      "pct": 15,
+      "tge": 5,
+      "cliff": 12,
+      "duration": 48,
+      "beneficiary": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+      "amount": "150000000",
+      "unlockedAtTge": "7500000",
+      "vested": "142500000"
+    },
+    {
+      "label": "Foundation & Operations",
+      "env": "FOUNDATION_ADDRESS",
+      "pct": 15,
+      "tge": 0,
+      "cliff": 6,
+      "duration": 30,
+      "beneficiary": "0x282da756e55A4f3d23645Ef85528A75153A79928",
+      "amount": "150000000",
+      "unlockedAtTge": "0",
+      "vested": "150000000"
+    }
+  ],
+  "circulatingAtTge": "207500000",
+  "agent": {
+    "address": "0x6F90de57291A757f903d70f3cACcf4e23943026F",
+    "operator": "0x0000000000000000000000000000000000000000",
+    "bond": "0.0",
+    "dailyLimit": "0.0",
+    "metadataHash": "0x12d922e61c04b3351c8f5fc613b8ad647d6be744ec0d737c23c492e0f68a2db7",
+    "registeredAt": 0
+  },
+  "deployBlock": 134046772
+}

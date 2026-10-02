@@ -1,0 +1,9 @@
+node_modules/
+artifacts/
+cache/
+.env
+*.log
+# bot runtime state (local anchor log, access-grant index)
+bot/anchors.*.jsonl
+bot/access.*.json
+__pycache__/
