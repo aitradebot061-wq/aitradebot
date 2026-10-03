@@ -57,6 +57,9 @@ Community-pool tokens stay in the foundation wallet after vesting until actually
 | `MIN_FEE_BURN_BPS` | 3,000 | Burn share floor of 30%; owner can only raise it |
 | `MAX_BOUNTY_FEE_BPS` | 500 | Bounty fee can never exceed 5% |
 | `MAX_REGISTRATION_FEE` | 1,000 ATB | Registration fee ceiling |
+| `MAX_MIN_BOND` | 100,000 ATB | Minimum-bond ceiling |
+| `MAX_PAUSE` | 7 days | A pause expires on its own |
+| `PAUSE_COOLDOWN` | 7 days | Minimum unpaused time before another pause |
 | `UNBOND_DELAY` | 7 days | Dispute window before a bond is returned |
 
 **Transparency counters (public view functions):** `totalBurned`, `totalTreasuryFees`, `totalAccessPaid`, `agentCount`, `totalAnchors`. The website dashboard reads them directly.
@@ -76,11 +79,11 @@ The treasury is a Safe multisig (3/5). Quarterly spending reports are published.
 
 | Role | Now | Target | Can | Cannot |
 |---|---|---|---|---|
-| `owner` | Deployer → Safe 3/5 at launch | DAO, 2027 Q2 | Fee rates within caps, min bond, arbiter/treasury addresses, pause | Mint, blacklist, alter vesting, seize bonds |
+| `owner` | Deployer → Safe 3/5 at launch | DAO, 2027 Q2 | Fee rates within caps, min bond within cap, arbiter/treasury addresses, bounded pause, emergency freeze of a registered agent | Mint, blacklist, alter vesting, seize bonds, change an agent's daily limit, unfreeze an agent, touch unregistered wallets |
 | `arbiter` | Deployer → Safe 3/5 at launch | Dispute DAO, 2027 Q2 | Slash registered bots' bonds (reason on-chain) | Touch any non-bond balance |
 | Vesting `owner` | Renounced at deployment | — | Nothing | Everything |
 
-Pause exists for incident response before the audit. Renouncing it by multisig vote after the audit is on the roadmap.
+Pause exists for incident response before the audit. It lasts at most 7 days, cannot be re-armed for 7 days after it ends, and `disablePauseForever()` removes it for good. The Safe will call it once the audit report is public. Ownership moves in two steps: the new owner must call `acceptOwnership()`.
 
 ## 6. Regulatory positioning
 

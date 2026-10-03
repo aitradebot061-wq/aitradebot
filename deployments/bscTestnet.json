@@ -1,10 +1,10 @@
 {
   "network": "bscTestnet",
   "chainId": 97,
-  "token": "0x3c803be1699A6bC105ce45506A54fA91adf9C217",
-  "vesting": "0x7667027c4BE9607BF17bbB52E3ffFcC2587cD5DA",
+  "token": "0xbb110c9F58A86622e6424B4F955aE92458BE04d8",
+  "vesting": "0xF12a5080C04AF1FC4993C3e55944C08E2655D158",
   "treasury": "0x282da756e55A4f3d23645Ef85528A75153A79928",
-  "tge": 1790789602,
+  "tge": 1791005891,
   "allocations": [
     {
       "label": "Liquidity (PancakeSwap LP)",
@@ -73,8 +73,17 @@
     "operator": "0x0000000000000000000000000000000000000000",
     "bond": "0.0",
     "dailyLimit": "0.0",
-    "metadataHash": "0x12d922e61c04b3351c8f5fc613b8ad647d6be744ec0d737c23c492e0f68a2db7",
+    "metadataHash": "0x74b5d15a7d72f548e94a9eafb07e4d96b128454372eae7191a01b421e472b53a",
+    "metadata": {
+      "name": "ATB reference quant agent",
+      "version": "1.0.0",
+      "markets": [
+        "binance-spot",
+        "binance-futures"
+      ],
+      "risk": "stop-loss watcher, wallet guard, session risk controls; on-chain daily cap + kill switch via ATB",
+      "custody": "user exchange account, trade-only API keys"
+    },
     "registeredAt": 0
-  },
-  "deployBlock": 134046772
+  }
 }

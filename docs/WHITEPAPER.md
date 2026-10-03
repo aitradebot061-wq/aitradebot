@@ -16,12 +16,12 @@ AI Trade Bot is a **verification and safety layer for AI trading agents**, deliv
 
 | Feature | What it does | Why it matters |
 |---|---|---|
-| Agent registry | An operator registers a bot wallet with a metadata hash and an ATB bond | Identity and skin in the game |
-| Trade anchoring | The bot writes a hash of every filled order to the chain | A track record that cannot be photoshopped |
+| Agent registry | The bot wallet consents to an operator, who registers it with a metadata hash and an ATB bond | Identity and skin in the game; no wallet can be enrolled against its will |
+| Trade anchoring | The bot writes a hash of every filled order into a per-bot hash chain on-chain | A track record that cannot be photoshopped, trimmed or reordered |
 | Daily spend cap | Transfers from a registered bot wallet are capped per 24 hours | Bounded loss if the bot is compromised |
 | Kill switch | Operator or owner freezes a bot instantly; only the operator can unfreeze | Immediate containment |
 | Slashing | An arbiter cuts a misbehaving bot's bond; slashed tokens are burned, reason recorded on-chain | Enforced accountability |
-| On-chain reputation | bond + days live + anchors/10 − 100 per slash, readable by anyone | Pick a bot by evidence, not marketing |
+| On-chain reputation | min(bond / 100 ATB, 100) + days live + anchors/10 − 100 per lifetime slash, readable by anyone | Pick a bot by evidence, not marketing; a big bond alone cannot buy a top score |
 | Bounty escrow | Vulnerability rewards locked in ATB, paid after verification | Incentive for security research |
 
 **The bot runs on the user's own exchange account.** Bots trade crypto on Binance. API keys are trade-only; withdrawal permission stays off. AI Trade Bot never takes custody of user funds.
@@ -67,13 +67,15 @@ Full specification: [TOKENOMICS.md](TOKENOMICS.md). Every number is mirrored in 
 
 - **2026 Q4** — BSC testnet → external audit → BNB mainnet. PancakeSwap pool with 12-month LP lock. CoinMarketCap and CoinGecko listing. Reference agent starts anchoring live trades.
 - **2027 Q1** — Bot SDK (Python / TypeScript): `register`, `anchorTrade`, `payAccess`, `freeze`. Public bot leaderboard.
-- **2027 Q2** — Arbiter multisig → dispute DAO. Pause key renounced after audit.
+- **2027 Q2** — Arbiter multisig → dispute DAO. Pause disabled forever after the audit (`disablePauseForever`).
 - **2027 Q3** — Third-party bots onboard with bonds. Verification API for other platforms.
 
 ## 7. Governance and security
 
 - `owner` and `arbiter` move to a Safe multisig (3/5) immediately after deployment.
-- Owner powers are limited to fee parameters within hard caps, minimum bond, address updates and pause. There is no mint, no blacklist, no transfer restriction and no way to alter vesting.
+- Owner powers are limited to fee parameters within hard caps, minimum bond within a cap, address updates, emergency freeze of a registered agent and a bounded pause (7 days max, 7-day cooldown, removable forever). There is no mint, no blacklist, no transfer restriction and no way to alter vesting. Ownership transfers in two steps.
+- Slash history stays with the bot wallet after it deregisters, and the 7-day unbonding window starts only after the bot stops anchoring.
+- What anchoring proves: the published trade log is complete, in order and unedited since each fill. Entries are anchored at fill time, before the outcome is known, so an open position whose exit never appears is visible. It does not prove the exchange executed the fill; that needs exchange-side attestation, which is on the roadmap.
 - Slashing criteria are published; every slash carries its reason as an on-chain event.
 - The audit report is published on the website before mainnet.
 

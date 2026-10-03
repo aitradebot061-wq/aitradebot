@@ -6,6 +6,7 @@
  * - Bot wallet: BOT_PRIVATE_KEY in .env. If missing, a fresh key is generated and appended to .env.
  *   The bot wallet holds only gas; the bond is paid by the operator (deployer/treasury signer).
  * - Sends BOT_GAS_BNB (default 0.02) to the bot wallet if it has less than that.
+ * - The bot wallet calls approveOperator(operator) (consent; required by the contract).
  * - Calls registerAgent(bot, metadataHash, BOND, DAILY_LIMIT) from the operator.
  * - Writes the agent address + metadata into deployments/<network>.json.
  */
@@ -26,6 +27,15 @@ const META = {
   risk: "stop-loss watcher, wallet guard, session risk controls; on-chain daily cap + kill switch via ATB",
   custody: "user exchange account, trade-only API keys",
 };
+
+// Same canonical JSON as the SDKs (Python json.dumps(sort_keys=True)).
+function canonicalJson(v) {
+  if (v === null || v === undefined) return "null";
+  if (Array.isArray(v)) return "[" + v.map(canonicalJson).join(", ") + "]";
+  if (typeof v === "object") return "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ": " + canonicalJson(v[k])).join(", ") + "}";
+  if (typeof v === "string") return JSON.stringify(v).replace(/[\u007f-\uffff]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  return String(v);
+}
 
 async function main() {
   const [op] = await hre.ethers.getSigners();
@@ -57,10 +67,16 @@ async function main() {
 
   // 3. register
   const a = await token.agents(bot.address);
-  const metadataHash = "0x" + crypto.createHash("sha256").update(JSON.stringify(META, Object.keys(META).sort())).digest("hex");
+  const metadataHash = "0x" + crypto.createHash("sha256").update(canonicalJson(META)).digest("hex");
   if (a.registered) {
     console.log("already registered; skipping registerAgent");
   } else {
+    // 3a. consent: the bot wallet approves the operator (the contract rejects registration without it)
+    if ((await token.approvedOperator(bot.address)).toLowerCase() !== op.address.toLowerCase()) {
+      const ctx = await token.connect(bot).approveOperator(op.address);
+      await ctx.wait();
+      console.log(`approveOperator (sent by bot wallet)  ${ctx.hash}`);
+    }
     const bond = hre.ethers.parseUnits(BOND, 18);
     const limit = hre.ethers.parseUnits(DAILY_LIMIT, 18);
     const fee = await token.registrationFee();

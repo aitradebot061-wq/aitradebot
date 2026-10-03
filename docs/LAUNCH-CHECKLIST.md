@@ -7,14 +7,14 @@ Ordered. Each phase gates the next. Items marked **(you)** need accounts, money 
 - [x] Concept: verified AI trading agents, user-custody only, no funding, no copy trading
 - [x] Pricing: Free / Standard $29 / Pro $99, USD-priced, paid in ATB (docs/PRICING.md)
 - [x] Tokenomics locked in code (docs/TOKENOMICS.md) — team 5% at TGE, contributors bucket folded into community pool (decided 2026-10-01)
-- [x] Site: English default, Korean toggle (site/index.html)
+- [x] Site: English only; Korean documents in docs/ko (site/index.html)
 
 ## Phase 1 — Testnet (deployed 2026-10-01)
-Token `0x3c803be1699A6bC105ce45506A54fA91adf9C217` · Vesting `0x7667027c4BE9607BF17bbB52E3ffFcC2587cD5DA` · both verified on testnet.bscscan.com
+Token `0xbb110c9F58A86622e6424B4F955aE92458BE04d8` · Vesting `0xF12a5080C04AF1FC4993C3e55944C08E2655D158` · both verified on testnet.bscscan.com (v2, 2026-10-03). v1 record kept in `deployments/bscTestnet.v1.json`.
 - [x] **(you)** Create a fresh deployer wallet, fund with tBNB: https://www.bnbchain.org/en/testnet-faucet
 - [x] **(you)** Copy `.env.example` → `.env`, fill `PRIVATE_KEY` and `ETHERSCAN_API_KEY` (beneficiary addresses may stay empty on testnet)
 - [x] `npm test` → `npm run deploy:testnet` → run the two `hardhat verify` commands printed
-- [ ] Commit `deployments/bscTestnet.json` (file exists; commit once the git repo is created)
+- [x] Commit `deployments/bscTestnet.json`
 - [x] Put the testnet address into `site/index.html` (`ATB.token`) so the live panel starts reading
 - [x] Register the quant bot as an agent, anchor real testnet trades (see Phase 1b)
 
@@ -29,6 +29,19 @@ Agent `0x6F90de57291A757f903d70f3cACcf4e23943026F` (bond 10,000 ATB, daily limit
 - [ ] **(you)** Roll out to the bot server (deploy script in the bot repo), then resume sessions
 - [ ] **(you)** Gate paid tiers on `AccessIndex.has_access()` once there is a paying user flow
 - [ ] Mainnet: `register-agent.js --network bsc` (metadata stays generic; only its hash is on-chain)
+
+## Phase 1c — Contract v2 hardening (done 2026-10-03)
+Fixes from the pre-audit review. All in `contracts/AITradeBot.sol`, covered by tests (27 passing).
+- [x] Consent-based registration: the agent wallet must call `approveOperator(operator)` first. Closes the hostile-registration attack (anyone could register a pool or third-party wallet as an agent and freeze it)
+- [x] Unbonding disables anchoring; `cancelUnbond` added; owner can no longer request unbond or set an agent's daily limit
+- [x] Slash and anchor history survive deregistration; seq numbers never restart
+- [x] Anchor hash chain `anchorHead`; bridge `verify_chain()` proves the local log is complete and unedited
+- [x] Reputation: bond points capped at 100 (10,000 ATB); days live and anchors now matter
+- [x] Bounded pause (7 days max, 7-day cooldown) and `disablePauseForever()`; `MAX_MIN_BOND` cap; two-step ownership (`Ownable2Step`)
+- [x] SDK hash parity between Python and TypeScript; only public trade fields are hashed and published
+- [x] Redeployed v2 on testnet, verified, bot agent re-registered with consent (same bot wallet); 2 anchors, hash chain verified against `anchorHead`; hostile registration rejected on-chain
+- [x] Site and docs point to the v2 address; fresh anchor log started
+- [ ] **(you)** Bot server: update this repo on the server, start a fresh `ATB_ANCHOR_LOG`, resume sessions
 
 ## Phase 2 — Socials and presence **(you)**
 Create in this order; use the same handle everywhere. Suggested handle: `aitradebot` (fallbacks: `atb_bot`, `aitradebot_atb`).
@@ -62,12 +75,13 @@ Create in this order; use the same handle everywhere. Suggested handle: `aitrade
 ## Phase 3 — Audit and legal **(you, budget)**
 - [ ] Get 2–3 audit quotes (small-firm range starts around a few thousand USD); scope = AITradeBot.sol + TokenVesting.sol
 - [ ] Fix findings, re-run tests, publish report on the site
+- [ ] After the report is public: Safe calls `token.disablePauseForever()`
 - [ ] Legal consultation before mainnet with two questions: DEX listing + access fees under Korean law; tax treatment of team tokens and treasury fees
 
 ## Phase 4 — Mainnet
 - [ ] **(you)** Safe multisigs: treasury 3/5, team 3/5. Collect signer addresses. Fill all 6 beneficiary addresses in `.env` (TEAM_ADDRESS = founder hardware wallet, never the deployer)
 - [ ] `npm run deploy:mainnet` (aborts if any beneficiary is missing) → verify both contracts → commit `deployments/bsc.json`
-- [ ] `token.setArbiter(<treasury safe>)`, `token.transferOwnership(<treasury safe>)` from the deployer
+- [ ] `token.setArbiter(<treasury safe>)`, `token.transferOwnership(<treasury safe>)` from the deployer, then `token.acceptOwnership()` from the Safe (two-step)
 - [ ] Update site `ATB.token`, `chain: 56`, `rpc`, `explorer` for mainnet
 - [ ] BscScan token info update: logo (site/logo.svg → 256px PNG), website, socials, whitepaper
 
@@ -75,7 +89,7 @@ Create in this order; use the same handle everywhere. Suggested handle: `aitrade
 - [ ] Decide initial pool: 200M ATB (20%) vs X BNB. Launch price = BNB deposited × BNB/USD ÷ 200M. Example: 50 BNB at $600 → $30,000 / 200M = $0.00015 per ATB, FDV $150k
 - [ ] PancakeSwap v3 pool ATB/WBNB, full-range position from the treasury Safe (not a personal wallet)
 - [ ] Lock LP NFT 12 months in a locker (e.g. UNCX or Team Finance); publish the lock link on the site and in the CMC form
-- [ ] Renounce nothing else yet — pause stays until the audit is public
+- [ ] Renounce nothing else yet — pause (bounded to 7 days) stays until the audit is public
 - [ ] Anti-snipe: announce the pool address only after liquidity is added and locked
 
 ## Phase 6 — Listings

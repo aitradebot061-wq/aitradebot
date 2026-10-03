@@ -7,3 +7,5 @@ cache/
 bot/anchors.*.jsonl
 bot/access.*.json
 __pycache__/
+# local work reports (not public)
+_reports/

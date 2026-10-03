@@ -94,7 +94,7 @@ async function main() {
 
   console.log(`\nVerify:\n  npx hardhat verify --network ${net} ${tokenAddr} ${supplyWei} ${deployer.address} ${treasury}`);
   console.log(`  npx hardhat verify --network ${net} ${vestAddr} ${tokenAddr} ${deployer.address}`);
-  console.log(`\nNEXT (manual, multisig):\n  token.setArbiter(<safe>)  token.transferOwnership(<safe>)\n  create PancakeSwap pool, lock LP tokens 12 months, publish lock link`);
+  console.log(`\nNEXT (manual, multisig):\n  token.setArbiter(<safe>)  token.transferOwnership(<safe>)  then the Safe calls token.acceptOwnership()\n  create PancakeSwap pool, lock LP tokens 12 months, publish lock link`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -3,46 +3,66 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * AI Trade Bot (ATB) — BEP-20 token for verified AI trading agents.
  *
  *  A trading bot registers as an agent, posts an ATB bond, and runs under a daily
- *  spend cap and an operator kill switch. Trade-log hashes can be anchored on-chain
- *  so performance is verifiable. ATB is a utility token: access, bond, bounties.
- *  It carries no profit share and never pools user funds.
+ *  spend cap and an operator kill switch. Trade-log hashes are anchored on-chain
+ *  into a per-agent hash chain so performance is verifiable. ATB is a utility token:
+ *  access, bond, bounties. It carries no profit share and never pools user funds.
  *
  *  Supply guarantees (enforced by code, not policy):
  *  - Fixed supply: the only mint is in the constructor. No mint function exists.
  *  - Deflationary: slashed bonds are 100% burned; a minimum share of every protocol
  *    fee is burned (MIN_FEE_BURN_BPS). Owner can raise the burn share, never lower
  *    it below the floor.
- *  - Fee caps: registration fee and bounty fee have hard maximums in code.
+ *  - Fee caps: registration fee, minimum bond and bounty fee have hard maximums in code.
  *  - No blacklist, no per-address tax, no transfer restrictions except the agent
- *    rules an operator opts into by registering.
+ *    rules a wallet opts into by consenting to an operator.
+ *  - Bounded pause: an emergency pause lasts at most MAX_PAUSE, cannot be re-armed
+ *    for PAUSE_COOLDOWN after it ends, and can be disabled forever.
+ *  - Two-step ownership transfer (Ownable2Step): the new owner must accept.
  *
  *  Features:
- *  - Agent registry: an operator registers an agent wallet and posts an ATB bond.
+ *  - Agent registry: an agent wallet consents to an operator (approveOperator), then the
+ *    operator registers it and posts an ATB bond. No wallet can become an agent without
+ *    its own transaction, so pools and third-party wallets can never be frozen or capped.
  *  - Daily spend limit: transfers FROM a registered agent are capped per 24h
  *    (limits blast radius if the agent is hijacked / prompt-injected).
- *  - Kill switch: operator (or owner) can freeze an agent instantly.
- *  - Slashing: arbiter can slash a misbehaving agent's bond (burned).
- *  - Trade anchoring: an agent records trade-log hashes for a verifiable track record.
+ *  - Kill switch: operator (or owner, for emergencies) can freeze an agent instantly;
+ *    only the operator can unfreeze.
+ *  - Slashing: arbiter can slash a misbehaving agent's bond (burned). Slash and anchor
+ *    history stay with the agent wallet after deregistration.
+ *  - Unbonding: once requested, the agent can no longer anchor trades, so the full
+ *    UNBOND_DELAY is a dispute window after its last activity.
+ *  - Trade anchoring: append-only hash chain per agent (anchorHead), seq never restarts.
  *  - Access fees: users pay ATB for bot access; fee is split burn / treasury.
  *  - Bounty escrow: lock ATB as a security bounty, pay out to a hunter.
  */
-contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard {
+contract AITradeBot is ERC20, ERC20Burnable, Ownable2Step, ReentrancyGuard {
     uint16 public constant BPS = 10_000;
 
     // ---------- Protocol economics (hard caps) ----------
     uint16 public constant MIN_FEE_BURN_BPS = 3_000;             // >= 30% of every fee is burned
     uint16 public constant MAX_BOUNTY_FEE_BPS = 500;             // <= 5% of bounty payouts
     uint256 public constant MAX_REGISTRATION_FEE = 1_000 ether;  // <= 1,000 ATB
+    uint256 public constant MAX_MIN_BOND = 100_000 ether;        // minBond can never exceed 100,000 ATB
     uint256 public constant UNBOND_DELAY = 7 days;
     uint256 public constant WINDOW = 24 hours;
+
+    // ---------- Bounded emergency pause ----------
+    uint256 public constant MAX_PAUSE = 7 days;       // a pause expires on its own
+    uint256 public constant PAUSE_COOLDOWN = 7 days;  // minimum unpaused time before the next pause
+    uint256 public pausedUntil;                       // 0 = never paused
+    bool public pauseDisabled;                        // true = pause() can never be called again
+
+    // ---------- Reputation weights ----------
+    uint256 public constant REP_BOND_UNIT = 100 ether; // 1 point per 100 ATB of bond ...
+    uint256 public constant REP_MAX_BOND_POINTS = 100; // ... capped at 100 points (10,000 ATB)
+    uint256 public constant REP_SLASH_PENALTY = 100;
 
     address public treasury;          // protocol treasury (multisig)
     address public arbiter;           // slashing authority (multisig / DAO)
@@ -67,13 +87,19 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         uint256 spentToday;
         uint256 windowStart;
         uint256 registeredAt;
-        uint256 slashCount;
+        uint256 slashCount;    // lifetime, survives deregistration
         uint256 unbondRequestedAt;
-        uint256 anchorCount;   // number of trade-log hashes anchored
+        uint256 anchorCount;   // lifetime, survives deregistration (= last anchor seq)
         bool frozen;
         bool registered;
     }
     mapping(address => Agent) public agents;
+
+    /// agent wallet => operator it consents to be registered by (one-shot, cleared on registration)
+    mapping(address => address) public approvedOperator;
+
+    /// agent wallet => head of its anchor hash chain: head' = keccak256(head, logHash). Never reset.
+    mapping(address => bytes32) public anchorHead;
 
     // ---------- Bounties ----------
     struct Bounty {
@@ -85,11 +111,13 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
     Bounty[] public bounties;
 
     // ---------- Events ----------
+    event OperatorApproved(address indexed agent, address indexed operator);
     event AgentRegistered(address indexed agent, address indexed operator, uint256 bond, uint256 dailyLimit);
     event AgentFrozen(address indexed agent, bool frozen);
     event AgentSlashed(address indexed agent, uint256 amount, string reason);
     event BondIncreased(address indexed agent, uint256 amount);
     event UnbondRequested(address indexed agent);
+    event UnbondCancelled(address indexed agent);
     event AgentDeregistered(address indexed agent, uint256 bondReturned);
     event DailyLimitUpdated(address indexed agent, uint256 newLimit);
     event TradeAnchored(address indexed agent, uint256 indexed seq, bytes32 logHash, uint256 timestamp);
@@ -101,6 +129,9 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
     event ArbiterUpdated(address arbiter);
     event TreasuryUpdated(address treasury);
     event FeeParamsUpdated(uint16 feeBurnBps, uint16 bountyFeeBps, uint256 registrationFee, uint256 minBond);
+    event Paused(address account, uint256 until);
+    event Unpaused(address account);
+    event PauseDisabledForever(address account);
 
     constructor(uint256 initialSupply, address initialOwner, address treasury_)
         ERC20("AI Trade Bot", "ATB")
@@ -120,6 +151,7 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         require(feeBurnBps_ >= MIN_FEE_BURN_BPS && feeBurnBps_ <= BPS, "burn share out of range");
         require(bountyFeeBps_ <= MAX_BOUNTY_FEE_BPS, "bounty fee too high");
         require(registrationFee_ <= MAX_REGISTRATION_FEE, "registration fee too high");
+        require(minBond_ <= MAX_MIN_BOND, "min bond too high");
         feeBurnBps = feeBurnBps_;
         bountyFeeBps = bountyFeeBps_;
         registrationFee = registrationFee_;
@@ -127,10 +159,39 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         emit FeeParamsUpdated(feeBurnBps_, bountyFeeBps_, registrationFee_, minBond_);
     }
 
-    function pause() external onlyOwner { _pause(); }
-    function unpause() external onlyOwner { _unpause(); }
+    // ---------- Bounded pause ----------
+    function paused() public view returns (bool) { return block.timestamp < pausedUntil; }
+
+    /// Emergency stop for at most MAX_PAUSE. Cannot be re-armed until PAUSE_COOLDOWN after the last pause ended.
+    function pause() external onlyOwner {
+        require(!pauseDisabled, "pause disabled");
+        require(!paused(), "already paused");
+        require(pausedUntil == 0 || block.timestamp >= pausedUntil + PAUSE_COOLDOWN, "pause cooldown");
+        pausedUntil = block.timestamp + MAX_PAUSE;
+        emit Paused(msg.sender, pausedUntil);
+    }
+
+    function unpause() external onlyOwner {
+        require(paused(), "not paused");
+        pausedUntil = block.timestamp;
+        emit Unpaused(msg.sender);
+    }
+
+    /// Irreversible: removes the pause power for good (planned after the audit). Lifts any active pause.
+    function disablePauseForever() external onlyOwner {
+        require(!pauseDisabled, "already disabled");
+        pauseDisabled = true;
+        if (paused()) { pausedUntil = block.timestamp; emit Unpaused(msg.sender); }
+        emit PauseDisabledForever(msg.sender);
+    }
+
+    modifier onlyOperator(address agent) {
+        require(agents[agent].registered && msg.sender == agents[agent].operator, "not operator");
+        _;
+    }
 
     modifier onlyOperatorOrOwner(address agent) {
+        require(agents[agent].registered, "not registered");
         require(msg.sender == agents[agent].operator || msg.sender == owner(), "not operator");
         _;
     }
@@ -156,13 +217,23 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
     }
 
     // ---------- Agent lifecycle ----------
+    /// Called BY the agent wallet: consent to be registered by `operator` (address(0) withdraws consent).
+    function approveOperator(address operator) external {
+        approvedOperator[msg.sender] = operator;
+        emit OperatorApproved(msg.sender, operator);
+    }
+
+    /// Register `agent` with the caller as operator. The agent wallet must have approved the caller
+    /// (approveOperator), or be the caller itself. Lifetime slash/anchor history of the wallet is kept.
     function registerAgent(address agent, bytes32 metadataHash, uint256 bond, uint256 dailyLimit)
         external nonReentrant
     {
         require(agent != address(0), "zero agent");
         require(!agents[agent].registered, "already registered");
+        require(msg.sender == agent || approvedOperator[agent] == msg.sender, "agent has not approved operator");
         require(bond >= minBond, "bond too low");
 
+        delete approvedOperator[agent];
         _takeFee(msg.sender, registrationFee);
         _transfer(msg.sender, address(this), bond);
 
@@ -171,8 +242,11 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         a.metadataHash = metadataHash;
         a.bond = bond;
         a.dailyLimit = dailyLimit;
-        a.registeredAt = block.timestamp;
+        a.spentToday = 0;
         a.windowStart = block.timestamp;
+        a.registeredAt = block.timestamp;
+        a.unbondRequestedAt = 0;
+        a.frozen = false;
         a.registered = true;
         agentCount += 1;
 
@@ -181,24 +255,25 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
 
     function increaseBond(address agent, uint256 amount) external nonReentrant {
         require(agents[agent].registered, "not registered");
+        require(amount > 0, "zero");
         _transfer(msg.sender, address(this), amount);
         agents[agent].bond += amount;
         emit BondIncreased(agent, amount);
     }
 
-    function setDailyLimit(address agent, uint256 limit) external onlyOperatorOrOwner(agent) {
+    /// Only the operator sets the cap; the owner has no say over an agent's spending.
+    function setDailyLimit(address agent, uint256 limit) external onlyOperator(agent) {
         agents[agent].dailyLimit = limit;
         emit DailyLimitUpdated(agent, limit);
     }
 
-    /// Kill switch — operator or owner can freeze; unfreeze only by operator.
+    /// Kill switch — operator or owner (emergency) can freeze; unfreeze only by operator.
     function freezeAgent(address agent) external onlyOperatorOrOwner(agent) {
         agents[agent].frozen = true;
         emit AgentFrozen(agent, true);
     }
 
-    function unfreezeAgent(address agent) external {
-        require(msg.sender == agents[agent].operator, "not operator");
+    function unfreezeAgent(address agent) external onlyOperator(agent) {
         agents[agent].frozen = false;
         emit AgentFrozen(agent, false);
     }
@@ -209,6 +284,7 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         Agent storage a = agents[agent];
         require(a.registered, "not registered");
         if (amount > a.bond) amount = a.bond;
+        require(amount > 0, "nothing to slash");
         a.bond -= amount;
         a.slashCount += 1;
         _burn(address(this), amount);
@@ -216,42 +292,62 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
         emit AgentSlashed(agent, amount, reason);
     }
 
-    function requestUnbond(address agent) external onlyOperatorOrOwner(agent) {
-        agents[agent].unbondRequestedAt = block.timestamp;
+    /// Starts the dispute window. From now on the agent can no longer anchor trades.
+    function requestUnbond(address agent) external onlyOperator(agent) {
+        Agent storage a = agents[agent];
+        require(a.unbondRequestedAt == 0, "already requested");
+        a.unbondRequestedAt = block.timestamp;
         emit UnbondRequested(agent);
     }
 
+    function cancelUnbond(address agent) external onlyOperator(agent) {
+        require(agents[agent].unbondRequestedAt != 0, "not requested");
+        agents[agent].unbondRequestedAt = 0;
+        emit UnbondCancelled(agent);
+    }
+
     /// After the delay (dispute window), operator gets remaining bond back.
-    function deregisterAgent(address agent) external nonReentrant {
+    /// Lifetime slash and anchor counts stay attached to the agent wallet.
+    function deregisterAgent(address agent) external nonReentrant onlyOperator(agent) {
         Agent storage a = agents[agent];
-        require(msg.sender == a.operator, "not operator");
         require(a.unbondRequestedAt != 0 && block.timestamp >= a.unbondRequestedAt + UNBOND_DELAY, "unbond delay");
         uint256 refund = a.bond;
+        uint256 slashes = a.slashCount;
+        uint256 anchors = a.anchorCount;
         delete agents[agent];
+        agents[agent].slashCount = slashes;
+        agents[agent].anchorCount = anchors;
         agentCount -= 1;
         if (refund > 0) _transfer(address(this), msg.sender, refund);
         emit AgentDeregistered(agent, refund);
     }
 
     // ---------- Proof of performance ----------
-    /// Agent (or its operator) anchors a hash of its trade log. Cheap, append-only, verifiable.
+    /// Agent (or its operator) anchors a hash of one trade record. Append-only hash chain:
+    /// anchorHead' = keccak256(anchorHead, logHash). Seq numbers never restart, so gaps and
+    /// reordering are detectable by replaying TradeAnchored events against the published log.
     function anchorTrade(address agent, bytes32 logHash) external {
         Agent storage a = agents[agent];
         require(a.registered, "not registered");
         require(msg.sender == agent || msg.sender == a.operator, "not agent");
         require(!a.frozen, "agent frozen");
+        require(a.unbondRequestedAt == 0, "unbonding");
         a.anchorCount += 1;
         totalAnchors += 1;
+        anchorHead[agent] = keccak256(abi.encodePacked(anchorHead[agent], logHash));
         emit TradeAnchored(agent, a.anchorCount, logHash, block.timestamp);
     }
 
     // ---------- Reputation (simple, on-chain readable) ----------
-    /// Score = bond in whole tokens + days registered + anchors/10, minus 100 per slash. Never below zero.
+    /// Score = min(bond / 100 ATB, 100) + days registered + lifetime anchors / 10
+    ///         - 100 per lifetime slash. Never below zero. Bond alone cannot buy more than 100 points.
     function reputation(address agent) external view returns (uint256) {
         Agent storage a = agents[agent];
         if (!a.registered) return 0;
-        uint256 score = a.bond / 10 ** decimals() + (block.timestamp - a.registeredAt) / 1 days + a.anchorCount / 10;
-        uint256 penalty = a.slashCount * 100;
+        uint256 bondPoints = a.bond / REP_BOND_UNIT;
+        if (bondPoints > REP_MAX_BOND_POINTS) bondPoints = REP_MAX_BOND_POINTS;
+        uint256 score = bondPoints + (block.timestamp - a.registeredAt) / 1 days + a.anchorCount / 10;
+        uint256 penalty = a.slashCount * REP_SLASH_PENALTY;
         return score > penalty ? score - penalty : 0;
     }
 
@@ -272,10 +368,12 @@ contract AITradeBot is ERC20, ERC20Burnable, Ownable, Pausable, ReentrancyGuard 
     }
 
     /// Pay a hunter. A protocol fee (<= 5%) is taken from the payout and split burn / treasury.
+    /// The arbiter may also pay out (dispute resolution when the poster refuses to pay).
     function payBounty(uint256 id, address hunter) external nonReentrant {
         Bounty storage b = bounties[id];
         require(b.open, "closed");
         require(msg.sender == b.poster || msg.sender == arbiter, "not allowed");
+        require(hunter != address(0), "zero hunter");
         b.open = false;
         uint256 fee = (b.amount * bountyFeeBps) / BPS;
         uint256 payout = b.amount - fee;

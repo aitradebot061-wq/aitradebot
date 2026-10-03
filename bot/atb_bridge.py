@@ -25,7 +25,7 @@ import queue
 import sys
 import threading
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field, replace
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -34,6 +34,16 @@ sys.path.insert(0, str(ROOT / "sdk" / "python"))
 from aitradebot import AITradeBot  # noqa: E402
 
 EXPLORERS = {97: "https://testnet.bscscan.com", 56: "https://bscscan.com"}
+# Only these fields of a fill are hashed, anchored and published. Everything else the bot passes
+# (strategy name, session, model, interval...) stays in the private local log and never affects the hash,
+# so the public trade log can be released for verification without revealing the strategy.
+PUBLIC_TRADE_FIELDS = ("symbol", "side", "qty", "price", "ts", "order_id", "market", "mode")
+
+
+def public_record(trade: dict) -> dict:
+    return {k: trade[k] for k in PUBLIC_TRADE_FIELDS if k in trade}
+
+
 DEFAULT_RPC = {97: "https://data-seed-prebsc-1-s1.bnbchain.org:8545", 56: "https://bsc-dataseed.bnbchain.org"}
 
 
@@ -66,6 +76,7 @@ class GuardResult:
     registered: bool
     remaining_allowance: float
     checked_at: float
+    unbonding: bool = False
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -81,6 +92,7 @@ class AnchorResult:
     timestamp: int
     explorer_tx: str
     gas_used: int
+    private: dict = field(default_factory=dict)  # non-public fields; local log only, never hashed
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -146,10 +158,11 @@ class ATBBridge:
         try:
             info = self.sdk.agent(self.agent)
             remaining = self.sdk.remaining_allowance(self.agent) if info["registered"] else 0.0
-            c = GuardResult(True, "ok", bool(info["frozen"]), bool(info["registered"]), remaining, now)
+            c = GuardResult(True, "ok", bool(info["frozen"]), bool(info["registered"]), remaining, now,
+                            unbonding=bool(info["unbondRequestedAt"]))
         except Exception as e:  # RPC error
             if c is not None:
-                stale = GuardResult(c.ok, f"stale ({e.__class__.__name__})", c.frozen, c.registered, c.remaining_allowance, c.checked_at)
+                stale = replace(c, reason=f"stale ({e.__class__.__name__})")
                 return self._evaluate(stale, amount_atb)
             return GuardResult(False, f"rpc error: {e}", False, False, 0.0, now)
         self._guard_cache = c
@@ -158,11 +171,13 @@ class ATBBridge:
     @staticmethod
     def _evaluate(c: GuardResult, amount_atb: float) -> GuardResult:
         if not c.registered:
-            return GuardResult(False, "agent not registered", c.frozen, c.registered, c.remaining_allowance, c.checked_at)
+            return replace(c, ok=False, reason="agent not registered")
         if c.frozen:
-            return GuardResult(False, "agent frozen (kill switch)", c.frozen, c.registered, c.remaining_allowance, c.checked_at)
+            return replace(c, ok=False, reason="agent frozen (kill switch)")
+        if c.unbonding:
+            return replace(c, ok=False, reason="agent unbonding (anchoring disabled)")
         if amount_atb > c.remaining_allowance:
-            return GuardResult(False, f"daily cap: {amount_atb} > remaining {c.remaining_allowance}", c.frozen, c.registered, c.remaining_allowance, c.checked_at)
+            return replace(c, ok=False, reason=f"daily cap: {amount_atb} > remaining {c.remaining_allowance}")
         return c
 
     def is_frozen(self) -> bool:
@@ -171,10 +186,15 @@ class ATBBridge:
     # ---------- anchoring ----------
     @staticmethod
     def trade_hash_hex(trade: dict) -> str:
-        return "0x" + AITradeBot.trade_hash(trade).hex()
+        """Hash of the PUBLIC part of a fill (see PUBLIC_TRADE_FIELDS)."""
+        return "0x" + AITradeBot.trade_hash(public_record(trade)).hex()
 
     def anchor_now(self, trade: dict) -> AnchorResult:
-        """Synchronous anchor with retries. Raises on final failure."""
+        """Synchronous anchor with retries. Raises on final failure.
+
+        Only public_record(trade) is hashed and anchored; the other fields go to the local log as `private`."""
+        private = {k: v for k, v in trade.items() if k not in PUBLIC_TRADE_FIELDS}
+        trade = public_record(trade)
         last: Exception | None = None
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -193,6 +213,7 @@ class ATBBridge:
                     timestamp=ts,
                     explorer_tx=f"{self.explorer}/tx/{tx_hash}",
                     gas_used=int(rc["gasUsed"]),
+                    private=private,
                 )
                 self._append_log(res)
                 if self.on_anchor:
@@ -201,11 +222,11 @@ class ATBBridge:
             except Exception as e:
                 last = e
                 msg = str(e)
-                if "agent frozen" in msg or "not registered" in msg or "not agent" in msg:
+                if any(x in msg for x in ("agent frozen", "not registered", "not agent", "unbonding")):
                     break  # permanent; retrying will not help
                 time.sleep(min(2 ** attempt, 10))
         assert last is not None
-        self.pending_failures.append({"trade": trade, "error": str(last), "at": time.time()})
+        self.pending_failures.append({"trade": {**trade, **private}, "error": str(last), "at": time.time()})
         if self.on_error:
             self.on_error(trade, last)
         raise last
@@ -263,6 +284,13 @@ class ATBBridge:
         out = [json.loads(x) for x in lines[-n:] if x.strip()]
         return list(reversed(out))
 
+    def all_anchors(self) -> list[dict]:
+        """Every locally logged anchor, ordered by seq."""
+        if not self.log_path.exists():
+            return []
+        rows = [json.loads(x) for x in self.log_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+        return sorted(rows, key=lambda r: r.get("seq", 0))
+
     # ---------- status ----------
     def status(self) -> dict:
         info = self.sdk.agent(self.agent)
@@ -272,6 +300,8 @@ class ATBBridge:
             "contract": self.sdk.c.address,
             "registered": bool(info["registered"]),
             "frozen": bool(info["frozen"]),
+            "unbonding": bool(info["unbondRequestedAt"]),
+            "anchor_head": _hex(self.sdk.anchor_head(self.agent)),
             "operator": info["operator"],
             "bond_atb": info["bond"],
             "daily_limit_atb": info["dailyLimit"],

@@ -107,16 +107,6 @@
   "type": "error"
  },
  {
-  "inputs": [],
-  "name": "EnforcedPause",
-  "type": "error"
- },
- {
-  "inputs": [],
-  "name": "ExpectedPause",
-  "type": "error"
- },
- {
   "inputs": [
    {
     "internalType": "address",
@@ -475,6 +465,44 @@
    {
     "indexed": true,
     "internalType": "address",
+    "name": "agent",
+    "type": "address"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "operator",
+    "type": "address"
+   }
+  ],
+  "name": "OperatorApproved",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "previousOwner",
+    "type": "address"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "newOwner",
+    "type": "address"
+   }
+  ],
+  "name": "OwnershipTransferStarted",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "address",
     "name": "previousOwner",
     "type": "address"
    },
@@ -496,6 +524,25 @@
     "internalType": "address",
     "name": "account",
     "type": "address"
+   }
+  ],
+  "name": "PauseDisabledForever",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": false,
+    "internalType": "address",
+    "name": "account",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "uint256",
+    "name": "until",
+    "type": "uint256"
    }
   ],
   "name": "Paused",
@@ -580,6 +627,19 @@
     "type": "address"
    }
   ],
+  "name": "UnbondCancelled",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "agent",
+    "type": "address"
+   }
+  ],
   "name": "UnbondRequested",
   "type": "event"
  },
@@ -624,6 +684,32 @@
  },
  {
   "inputs": [],
+  "name": "MAX_MIN_BOND",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "MAX_PAUSE",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
   "name": "MAX_REGISTRATION_FEE",
   "outputs": [
    {
@@ -643,6 +729,58 @@
     "internalType": "uint16",
     "name": "",
     "type": "uint16"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "PAUSE_COOLDOWN",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "REP_BOND_UNIT",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "REP_MAX_BOND_POINTS",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "REP_SLASH_PENALTY",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
    }
   ],
   "stateMutability": "view",
@@ -672,6 +810,13 @@
    }
   ],
   "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "acceptOwnership",
+  "outputs": [],
+  "stateMutability": "nonpayable",
   "type": "function"
  },
  {
@@ -789,6 +934,25 @@
   "inputs": [
    {
     "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "anchorHead",
+  "outputs": [
+   {
+    "internalType": "bytes32",
+    "name": "",
+    "type": "bytes32"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
     "name": "agent",
     "type": "address"
    },
@@ -825,6 +989,38 @@
    }
   ],
   "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "operator",
+    "type": "address"
+   }
+  ],
+  "name": "approveOperator",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "approvedOperator",
+  "outputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "stateMutability": "view",
   "type": "function"
  },
  {
@@ -964,6 +1160,19 @@
   "type": "function"
  },
  {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "agent",
+    "type": "address"
+   }
+  ],
+  "name": "cancelUnbond",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
   "inputs": [],
   "name": "decimals",
   "outputs": [
@@ -985,6 +1194,13 @@
    }
   ],
   "name": "deregisterAgent",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "disablePauseForever",
   "outputs": [],
   "stateMutability": "nonpayable",
   "type": "function"
@@ -1081,12 +1297,38 @@
  },
  {
   "inputs": [],
+  "name": "pauseDisabled",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
   "name": "paused",
   "outputs": [
    {
     "internalType": "bool",
     "name": "",
     "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "pausedUntil",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
    }
   ],
   "stateMutability": "view",
@@ -1131,6 +1373,19 @@
   "name": "payBounty",
   "outputs": [],
   "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "pendingOwner",
+  "outputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "stateMutability": "view",
   "type": "function"
  },
  {

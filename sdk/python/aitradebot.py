@@ -3,7 +3,9 @@
 pip install web3
 
     from aitradebot import AITradeBot
-    atb = AITradeBot(rpc, contract_address, private_key)   # operator or agent key
+    bot = AITradeBot(rpc, contract_address, agent_private_key)
+    bot.approve_operator(operator_addr)                     # agent wallet consents first
+    atb = AITradeBot(rpc, contract_address, operator_private_key)
     atb.register_agent(agent_addr, {"model": "gpt-x", "policy": "..."}, bond=5000, daily_limit=1000)
     atb.safe_pay(counterparty, 300, min_reputation=1000)   # checks rep + allowance first
 """
@@ -32,8 +34,15 @@ class AITradeBot:
     def from_wei(self, n): return n / 10 ** self.dec
 
     @staticmethod
+    def canonical_json(obj) -> str:
+        """Canonical form shared with the TS SDK: sorted keys at every level, separators ", " / ": ",
+        ASCII-escaped. Use ints or strings for numbers that must hash identically across languages
+        (Python writes 1.0 where JavaScript writes 1)."""
+        return json.dumps(obj, sort_keys=True, default=str)
+
+    @staticmethod
     def metadata_hash(meta: dict) -> bytes:
-        return hashlib.sha256(json.dumps(meta, sort_keys=True).encode()).digest()
+        return hashlib.sha256(AITradeBot.canonical_json(meta).encode()).digest()
 
     def _send(self, fn):
         if not self.acct:
@@ -58,8 +67,31 @@ class AITradeBot:
     def remaining_allowance(self, addr): return self.from_wei(self.c.functions.remainingDailyAllowance(Web3.to_checksum_address(addr)).call())
     def balance(self, addr): return self.from_wei(self.c.functions.balanceOf(Web3.to_checksum_address(addr)).call())
 
+    def anchor_head(self, addr) -> bytes:
+        """Head of the agent's on-chain anchor hash chain (keccak256(prev_head, trade_hash) per anchor)."""
+        return bytes(self.c.functions.anchorHead(Web3.to_checksum_address(addr)).call())
+
+    @staticmethod
+    def chain_head(trade_hashes, start: bytes = b"\x00" * 32) -> bytes:
+        """Recompute the anchor hash chain off-chain from an ordered list of trade hashes."""
+        head = start
+        for h in trade_hashes:
+            h = bytes.fromhex(h[2:]) if isinstance(h, str) else bytes(h)
+            head = bytes(Web3.keccak(head + h))
+        return head
+
+    # ---------- agent wallet actions ----------
+    def approve_operator(self, operator):
+        """Sent BY the agent wallet: consent to be registered by `operator`. Required before register_agent."""
+        return self._send(self.c.functions.approveOperator(Web3.to_checksum_address(operator)))
+
     # ---------- operator actions ----------
+    def request_unbond(self, agent): return self._send(self.c.functions.requestUnbond(Web3.to_checksum_address(agent)))
+    def cancel_unbond(self, agent): return self._send(self.c.functions.cancelUnbond(Web3.to_checksum_address(agent)))
+    def deregister(self, agent): return self._send(self.c.functions.deregisterAgent(Web3.to_checksum_address(agent)))
+
     def register_agent(self, agent, meta: dict, bond, daily_limit):
+        """Operator call. The agent wallet must first call approve_operator(operator) (or be the operator)."""
         return self._send(self.c.functions.registerAgent(Web3.to_checksum_address(agent), self.metadata_hash(meta), self.to_wei(bond), self.to_wei(daily_limit)))
     def set_daily_limit(self, agent, limit): return self._send(self.c.functions.setDailyLimit(Web3.to_checksum_address(agent), self.to_wei(limit)))
     def freeze(self, agent): return self._send(self.c.functions.freezeAgent(Web3.to_checksum_address(agent)))
@@ -72,7 +104,7 @@ class AITradeBot:
     @staticmethod
     def trade_hash(trade: dict) -> bytes:
         """Deterministic hash of one trade record (symbol, side, qty, price, ts, order_id...)."""
-        return hashlib.sha256(json.dumps(trade, sort_keys=True, default=str).encode()).digest()
+        return hashlib.sha256(AITradeBot.canonical_json(trade).encode()).digest()
     def anchor_trade(self, agent, trade: dict):
         return self._send(self.c.functions.anchorTrade(Web3.to_checksum_address(agent), self.trade_hash(trade)))
     def pay_access(self, agent, amount, plan: str = "monthly"):
