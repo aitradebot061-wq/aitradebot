@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AI Trade Bot — Verified AI trading. Your account, your keys.</title>
-<meta name="description" content="ATB is the BNB Chain utility token behind AI Trade Bot: AI trading agents that prove their track record on-chain, run under a daily cap and a kill switch, and never touch your funds.">
+<meta name="description" content="AI Trade Bot: an AI trading bot whose every trade is anchored on BNB Chain, wins and losses alike, with a public track record you can verify in your browser. Runs on your own exchange account.">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -132,6 +132,33 @@ ol.road li:first-child{color:var(--ink)} ol.road li:not(:first-child){color:var(
 footer{padding:36px 0 56px;color:var(--ink-2);font-size:14px;border-top:1px solid var(--line)}
 footer p{max-width:70em;margin-bottom:10px}
 .hidden{display:none!important}
+
+/* track record */
+.tr-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:760px){.tr-stats{grid-template-columns:1fr 1fr}}
+.tr-stats .card{padding:16px}
+.tr-stats .k{font-size:12px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+.tr-stats .v{font-family:"JetBrains Mono",monospace;font-size:clamp(20px,2.4vw,26px);font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+.pos{color:var(--accent)} .neg{color:var(--danger)}
+#tr-chart{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+#tr-chart svg{width:100%;height:180px;display:block}
+#tr-chart path,#tr-chart line{vector-effect:non-scaling-stroke}
+#tr-chart path{fill:none;stroke-width:2.5;stroke-linejoin:round}
+#tr-chart path.up{stroke:var(--accent)} #tr-chart path.down{stroke:var(--danger)}
+#tr-chart line.zero{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+.tr-empty{color:var(--ink-2);font-size:15px;padding:24px 8px;text-align:center}
+.checks{display:grid;gap:8px;margin:22px 0 10px;font-size:15px}
+.chk::before{display:inline-block;width:1.4em;font-weight:800}
+.chk.ok::before{content:"\2713";color:var(--accent)} .chk.bad::before{content:"\2715";color:var(--danger)}
+.chk.warn::before{content:"!";color:#D97706} .chk.wait::before{content:"\2026";color:var(--ink-2)}
+.chk.bad{color:var(--danger)}
+button.btn{font:inherit;font-weight:600;cursor:pointer}
+button.btn:disabled{opacity:.6;cursor:wait}
+.tr-scroll{overflow-x:auto;margin-top:22px}
+.tr-scroll table{min-width:560px}
+td.side{font-weight:700;font-size:13px} td.side.buy{color:var(--accent)} td.side.sell{color:var(--danger)}
+td a.ok{color:var(--accent);text-decoration:none} td a.bad{color:var(--danger)}
+.tr-meta{font-size:13px;color:var(--ink-2);margin-top:8px}
 </style>
 </head>
 <body>
@@ -139,6 +166,7 @@ footer p{max-width:70em;margin-bottom:10px}
 <nav>
   <a class="brand" href="#"><img src="logo.svg" alt=""> AI Trade Bot <small>ATB</small></a>
   <div class="links">
+    <a href="#record">Track record</a>
     <a href="#how">How it works</a>
     <a href="#pricing">Pricing</a>
     <a href="#token">Token</a>
@@ -152,8 +180,8 @@ footer p{max-width:70em;margin-bottom:10px}
     <h1>Verified AI trading.<br><em>Your account, your keys.</em></h1>
     <p class="lead">Every AI trading bot shows you screenshots. Ours writes every trade to BNB Chain, wins and losses alike, runs under a daily spend cap and a kill switch, and never holds your money.</p>
     <div class="cta">
-      <a class="btn fill" href="#how">See how it works</a>
-      <a class="btn" href="#token">Read the tokenomics</a>
+      <a class="btn fill" href="#record">See the track record</a>
+      <a class="btn" href="#how">How it works</a>
     </div>
     <div class="trust">
       <span>No pooled funds</span>
@@ -177,6 +205,36 @@ footer p{max-width:70em;margin-bottom:10px}
     <div class="ft"><span id="live-msg">Contract not deployed yet. Numbers appear the moment the testnet contract goes live.</span><a id="live-link" href="#" class="hidden" target="_blank" rel="noopener">View on BscScan →</a></div>
   </div>
 </header>
+
+<section id="record">
+  <h2>Track record</h2>
+  <p class="sub">The reference bot's live crypto trades, wins and losses alike. Each fill's hash is written on-chain the moment it happens; the details are published here 24 hours after the position closes. Your browser checks every row against that hash.</p>
+  <div class="tr-stats">
+    <div class="card"><div class="k">Closed trades</div><div class="v" id="tr-n">&mdash;</div></div>
+    <div class="card"><div class="k">Win rate</div><div class="v" id="tr-win">&mdash;</div></div>
+    <div class="card"><div class="k">Sum of trade returns</div><div class="v" id="tr-cum">&mdash;</div></div>
+    <div class="card"><div class="k">Max drawdown</div><div class="v" id="tr-mdd">&mdash;</div></div>
+    <div class="card"><div class="k">Avg win / avg loss</div><div class="v" id="tr-avg">&mdash;</div></div>
+    <div class="card"><div class="k">Profit factor</div><div class="v" id="tr-pf">&mdash;</div></div>
+  </div>
+  <p class="tr-empty" id="tr-status">Loading the published log&hellip;</p>
+  <div id="tr-chart" class="hidden"></div>
+  <div class="checks">
+    <div class="chk wait" id="tr-c-hash">Checking records against their hashes&hellip;</div>
+    <div class="chk wait" id="tr-c-chain">Checking the hash chain against BNB Chain&hellip;</div>
+    <div class="chk wait" id="tr-c-rcpt">Receipt check not run yet (one RPC call per anchor)</div>
+    <div class="chk wait" id="tr-pending">&mdash;</div>
+  </div>
+  <button class="btn" id="tr-receipts" type="button">Check every anchor on-chain</button>
+  <div class="tr-scroll hidden" id="tr-table">
+    <table>
+      <thead><tr><th>#</th><th>Filled</th><th>Pair</th><th>Side</th><th>Price</th><th>Trade result</th><th>Proof</th></tr></thead>
+      <tbody id="tr-rows"></tbody>
+    </table>
+  </div>
+  <p class="tr-meta" id="tr-updated"></p>
+  <p class="note">Results are per trade, in percent of the capital that trade used, net of fees. <span id="tr-fees"></span> They are not account returns and no money amounts are shown. Crypto markets only. This is a historical log of one bot, published for verification. It is not a signal, a recommendation or investment advice, and past results say nothing about future ones. Trading can lose money.</p>
+</section>
 
 <section id="how">
   <h2>Three things no other trading bot gives you</h2>
@@ -212,14 +270,14 @@ footer p{max-width:70em;margin-bottom:10px}
   <div class="steps">
     <div class="step"><h3>Connect your exchange</h3><p>Binance, with a trade-only API key. Withdrawal permission stays off, always.</p></div>
     <div class="step"><h3>Pick a verified bot</h3><p>Browse bots by on-chain reputation: bond size, days live, trades anchored, slashes.</p></div>
-    <div class="step"><h3>Pay access in ATB</h3><p>USD-priced plans, paid in ATB. Half of every payment is burned, half funds audits and infrastructure.</p></div>
+    <div class="step"><h3>Subscribe</h3><p>USD-priced software plans. Paid in USD at launch; paying in ATB, with half of every payment burned, starts only after the token launches.</p></div>
     <div class="step"><h3>Watch it prove itself</h3><p>Every fill lands in your dashboard and on the chain. Hit the kill switch any time.</p></div>
   </div>
 </section>
 
 <section id="pricing">
   <h2>Pricing</h2>
-  <p class="sub">Software subscription, priced in USD, paid in ATB at the current rate. Cancel any time. Your funds never move.</p>
+  <p class="sub">Software subscription, priced in USD. Paid plans open only after the bot has a public live track record of at least three months. Cancel any time. Your funds never move.</p>
   <div class="tiers">
     <div class="card tier"><h3>Free</h3><div class="price">$0</div><ul>
       <li>Dashboard and bot leaderboard</li><li>Backtests and crash/pump benchmarks</li><li>Read every bot's on-chain track record</li></ul>
@@ -231,12 +289,13 @@ footer p{max-width:70em;margin-bottom:10px}
       <li>Unlimited crypto bots</li><li>Every strategy, early access to new ones</li><li>Priority support</li></ul>
       <a class="btn" href="#docs">Go Pro</a></div>
   </div>
-  <p class="note">Annual billing: pay for 10 months, get 12. Bot operators who publish their own bot also lock a 1,000 ATB bond and pay a 100 ATB registration fee. Plan IDs are recorded on-chain in the AccessPaid event. Paid plans cover crypto only.</p>
+  <p class="note">Annual billing: pay for 10 months, get 12. Billed in USD at launch. After the token launches, plans can also be paid in ATB through the on-chain AccessPaid flow, and bot operators who publish their own bot lock a 1,000 ATB bond and pay a 100 ATB registration fee. Paid plans cover crypto only.</p>
 </section>
 
 <section id="token">
   <h2>Tokenomics that are enforced, not promised</h2>
   <p class="sub">1,000,000,000 ATB. No mint function. No public sale. Every lock-up is executed inside the deployment transaction, then the vesting admin key is burned.</p>
+  <p class="note" style="margin:-20px 0 24px"><b>Not launched.</b> ATB exists only on BSC testnet. It goes to mainnet only after the bot has six months of public live track record, an external audit is published and a legal review is complete. Until then there is nothing to buy.</p>
   <div class="bar" aria-hidden="true">
     <div style="width:20%;background:#0B1220"></div>
     <div style="width:35%;background:#16A34A"></div>
@@ -299,10 +358,10 @@ token.MAX_REGISTRATION_FEE() == 1_000e18</pre>
 <section id="roadmap">
   <h2>Roadmap</h2>
   <ol class="road">
-    <li><b>2026 Q4</b><span>BSC testnet → external audit → BNB mainnet, PancakeSwap pool with 12-month LP lock, CoinMarketCap / CoinGecko listing. First quant bot starts anchoring live trades.</span></li>
-    <li><b>2027 Q1</b><span>Bot SDK (Python / TypeScript): register, anchorTrade, payAccess, freeze. Public bot leaderboard.</span></li>
-    <li><b>2027 Q2</b><span>Arbiter multisig → dispute DAO. Pause disabled forever after the audit.</span></li>
-    <li><b>2027 Q3</b><span>Third-party bots onboard with bonds. Verification API for other platforms.</span></li>
+    <li><b>2026 Q4</b><span>Reference bot anchors every live crypto fill on BSC testnet. Public track record on this page, published 24 hours after each position closes.</span></li>
+    <li><b>2027 Q1</b><span>Three months of live record. Free dashboard. Paid plans open, billed in USD, only if the record and demand justify it.</span></li>
+    <li><b>2027 Q2</b><span>Six months of live record → external audit → legal review. Only then: ATB on BNB mainnet, PancakeSwap pool with 12-month LP lock, ATB as a payment option.</span></li>
+    <li><b>Later</b><span>Third-party bots onboard with bonds. Arbiter multisig → dispute DAO, pause disabled forever. Verification API for other platforms.</span></li>
   </ol>
 </section>
 
@@ -320,6 +379,7 @@ token.MAX_REGISTRATION_FEE() == 1_000e18</pre>
 
 <footer>
   <p>ATB is a utility token used for bot access, operator bonds and security bounties. It carries no profit share, no dividend and no promise of return. AI Trade Bot never takes custody of user funds; bots execute on the user's own exchange account. Trading involves risk of loss.</p>
+  <p>The track record is a historical, delayed log of one bot's trades, published so anyone can verify it. It is not a trading signal, a recommendation or investment advice. Past results do not predict future results.</p>
   <p>The contract is unaudited until the audit report is published on this page. Participants are responsible for compliance with the laws of their jurisdiction, including Korea's Virtual Asset User Protection Act.</p>
   <p>© 2026 AI Trade Bot</p>
 </footer>
@@ -381,6 +441,12 @@ function loadLive(){
 }
 loadLive();
 if (ATB.token) setInterval(loadLive, 30000);
+</script>
+<script src="vendor/sha3.min.js"></script>
+<script src="track-record.js"></script>
+<script>
+TrackRecord.load(ATB);
+document.getElementById("tr-receipts").addEventListener("click", function(){ TrackRecord.verifyReceipts(ATB); });
 </script>
 </body>
 </html>

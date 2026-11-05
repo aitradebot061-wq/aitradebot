@@ -43,6 +43,20 @@ Fixes from the pre-audit review. All in `contracts/AITradeBot.sol`, covered by t
 - [x] Site and docs point to the v2 address; fresh anchor log started
 - [ ] **(you)** Bot server: update this repo on the server, start a fresh `ATB_ANCHOR_LOG`, resume sessions
 
+## Phase 1d — Public track record (code done 2026-11-06)
+Commit now, reveal later: every fill's hash is anchored at fill time; the fill is published on the site 24 hours after its position closes. See `bot/README.md` → "Public track record".
+- [x] `bot/track_record.py`: pairs fills into round trips, reveals only closed + 24h crypto trades, keeps every hash in the list, refuses to publish if a record does not match its hash, `publish` commits only the snapshot file and only as "AI Trade Bot"
+- [x] Site "Track record" section: per-trade results in percent net of fees, win rate, drawdown, curve; browser re-hashes every record, rebuilds the hash chain against on-chain `anchorHead`, optional receipt check for every anchor
+- [x] Optional `fee` public field (quote currency); without it fees are estimated at 0.1% per side and the page says so
+- [ ] **(you)** Bot server rollout (Phase 1c item) so real fills start anchoring
+- [ ] **(you)** Server clone of this repo with a write deploy key, repo-local git identity "AI Trade Bot", and a daily cron: `python -m bot.track_record publish`
+- [ ] Optional: pass the exchange-reported `fee` with each fill from the bot hook
+
+## Gates (decided 2026-11-06)
+Nothing below a gate starts before the gate is met.
+- **Paid plans:** at least 3 months of public live track record, and user demand. Billed in USD.
+- **Token mainnet (Phases 4–6):** at least 6 months of public live track record + published external audit + written legal opinion.
+
 ## Phase 2 — Socials and presence **(you)**
 Create in this order; use the same handle everywhere. Suggested handle: `aitradebot` (fallbacks: `atb_bot`, `aitradebot_atb`).
 - [ ] Domain: aitradebot.xyz (or .io / .ai) — check availability, buy 2 years, enable DNSSEC
@@ -76,7 +90,7 @@ Create in this order; use the same handle everywhere. Suggested handle: `aitrade
 - [ ] Get 2–3 audit quotes (small-firm range starts around a few thousand USD); scope = AITradeBot.sol + TokenVesting.sol
 - [ ] Fix findings, re-run tests, publish report on the site
 - [ ] After the report is public: Safe calls `token.disablePauseForever()`
-- [ ] Legal consultation before mainnet with two questions: DEX listing + access fees under Korean law; tax treatment of team tokens and treasury fees
+- [ ] Legal consultation before mainnet. Questions: (1) is ATB a security (investment contract) given the fee and burn design; (2) DEX listing + access fees under Korean law, including whether any role needs VASP registration; (3) does the delayed, crypto-only public track record fall outside investment advisory rules; (4) online-sale and business-disclosure duties for paid subscriptions, and how they square with pseudonymous operation; (5) geo-restrictions for other jurisdictions; (6) tax treatment of team tokens and treasury fees
 
 ## Phase 4 — Mainnet
 - [ ] **(you)** Safe multisigs: treasury 3/5, team 3/5. Collect signer addresses. Fill all 6 beneficiary addresses in `.env` (TEAM_ADDRESS = founder hardware wallet, never the deployer)
@@ -104,3 +118,5 @@ Create in this order; use the same handle everywhere. Suggested handle: `aitrade
 - Every allocation wallet and its purpose is public in `deployments/bsc.json`.
 - Team never sells outside the vesting schedule; any treasury sale is announced 48h ahead.
 - No return language, ever, in any channel. "Verified", "bounded", "on-chain" — not "profit", "guaranteed", "passive income".
+- No real-time signals. The public reveal delay is never shorter than 24 hours after a position closes, and only crypto trades are revealed.
+- Never place bot results next to the ATB price, a buy link or a pool link.

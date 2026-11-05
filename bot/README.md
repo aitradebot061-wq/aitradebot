@@ -7,6 +7,7 @@ lives outside this repo; it imports this package and adds four calls (see `examp
 |---|---|
 | `atb_bridge.py` | `ATBBridge`: pre-order `guard()` (kill switch + daily cap + unbonding, cached), post-fill `anchor_fill()` (non-blocking queue with retries), local JSONL anchor log, `status()`. CLI: `status`, `guard`, `anchor-test`, `recent`. |
 | `onchain_status.py` | `onchain_tab(bridge)`: JSON for the dashboard "On-chain" tab (reputation, bond, anchors, last 20 hashes with BscScan links). `verify_recent()` re-checks logged tx hashes against chain receipts. `verify_chain()` recomputes the full anchor hash chain and compares it with on-chain `anchorHead`. `export_public_log()` writes the publishable log. |
+| `track_record.py` | Public track record: builds `site/data/track-record.json` from the local anchor log (round trips, reveal after close + 24h, crypto only, every hash kept). CLI: `build`, `publish`. |
 | `access_indexer.py` | `AccessIndex`: scans `AccessPaid` events into 30-day access grants keyed by payer wallet; `has_access(addr)`. Cursor persisted in `access.<network>.json`. |
 | `example_live_trader.py` | Minimal trader loop showing exactly where the four calls go. Runs against testnet. |
 
@@ -33,7 +34,7 @@ atb.anchor_fill(fill_dict)                         # [3] after every fill (retur
 
 atb.flush(timeout=60); atb.close()                 # [4] on shutdown: drain the queue
 ```
-`fill_dict` should carry `symbol, side, qty, price, ts, order_id, market` (optionally `mode`). Only these
+`fill_dict` should carry `symbol, side, qty, price, ts, order_id, market` (optionally `mode` and `fee`, the fee in the quote currency). Only these
 public fields (`PUBLIC_TRADE_FIELDS`) are hashed and anchored. Any other field the bot passes, such as a strategy
 or session name, is kept in the local log under `private` and never affects the hash, so the public log can be
 released without revealing the strategy. The anchored hash is `AITradeBot.trade_hash(public_record(fill))`
@@ -56,6 +57,20 @@ def api_onchain(): return onchain_tab(atb)
 ```
 Fields: `registered, frozen, unbonding, reputation, bond_atb, daily_limit_atb, remaining_allowance_atb, anchor_count,
 slash_count, anchor_head, gas_bnb, explorer_agent, explorer_contract, queue{queued,failed}, recent[{seq, hash, tx, tx_url, block, timestamp, symbol, side, market}]`.
+
+## Public track record
+```bash
+python -m bot.track_record build        # write site/data/track-record.json
+python -m bot.track_record publish      # build, then commit + push that file only if it changed
+```
+- Fills are paired into round trips per market and symbol (`BUY`/`COVER` add, `SELL`/`SHORT` subtract). A fill that flips the position is split between the two trips.
+- A fill is revealed only when every trip it belongs to closed at least `ATB_TRACK_DELAY_HOURS` (default 24) ago. Open and recent fills are listed by hash only. Non-crypto markets are always hash only. `market: test` anchors are shown and excluded from the stats.
+- Each revealed anchor carries `canon`, the exact canonical JSON that was hashed, so the browser can re-hash it without reimplementing number formatting.
+- Returns are per trip, percent of the opening notional, net of fees. The fill's `fee` (quote currency) is used when present; otherwise `ATB_FEE_RATE` per side (default 0.001) and the page labels fees as estimated.
+- The builder refuses to publish if any logged record does not hash to its logged anchor.
+- `publish` aborts unless the repo-local `git config user.name` is `AI Trade Bot`, stages only the snapshot file, and pushes; the Pages workflow then redeploys the site.
+
+Server setup (once): clone this repo on the bot server with a deploy key that has write access, set the repo-local git identity to `AI Trade Bot` and the noreply email, point `ATB_ANCHOR_LOG` at the bot's anchor log, and add a daily cron entry running `python -m bot.track_record publish` from the clone.
 
 ## Access grants (backend)
 ```bash

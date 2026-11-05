@@ -1,6 +1,12 @@
 # AI Trade Bot Pricing v1.0
 
-> Decided 2026-10-01. ATB is the means of payment. Prices are fixed in USD and converted to ATB at the rate quoted at checkout. Users run bots on their own exchange accounts with their own API keys. We never hold or manage funds.
+> Decided 2026-10-01, sequence revised 2026-11-06. Prices are fixed in USD. Users run bots on their own exchange accounts with their own API keys. We never hold or manage funds.
+
+## Launch sequence
+
+1. **Free only** while the public track record builds up.
+2. **Paid plans open** after at least three months of public live track record, and only if there is demand. Billed in USD.
+3. **ATB payment** becomes an option only after the token launches on mainnet (six months of live record, published audit, legal review). The flow below applies from then on.
 
 ## Tiers
 
@@ -14,7 +20,7 @@
 - Fee split: every payment is 50% burned, 50% to the treasury (the contract never burns less than 30%). A $99 Pro month burns $49.50 of ATB.
 - Bot operators (people who register and publish their own bot) additionally lock a minimum 1,000 ATB bond and pay a 100 ATB registration fee, independent of the plan.
 
-## Payment flow
+## Payment flow in ATB (after token launch)
 
 1. User picks a tier in the dashboard → backend quotes the ATB amount at the current ATB/USD rate (quote valid 10 minutes).
 2. User sends `payAccess(agent, amount, planId)`. 50% is burned, 50% goes to the treasury.

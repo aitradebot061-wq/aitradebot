@@ -37,7 +37,8 @@ EXPLORERS = {97: "https://testnet.bscscan.com", 56: "https://bscscan.com"}
 # Only these fields of a fill are hashed, anchored and published. Everything else the bot passes
 # (strategy name, session, model, interval...) stays in the private local log and never affects the hash,
 # so the public trade log can be released for verification without revealing the strategy.
-PUBLIC_TRADE_FIELDS = ("symbol", "side", "qty", "price", "ts", "order_id", "market", "mode")
+# `fee` (in the quote currency) is optional; when present, track-record returns use it instead of an estimate.
+PUBLIC_TRADE_FIELDS = ("symbol", "side", "qty", "price", "ts", "order_id", "market", "mode", "fee")
 
 
 def public_record(trade: dict) -> dict:

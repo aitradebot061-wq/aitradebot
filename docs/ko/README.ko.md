@@ -25,6 +25,7 @@
 npx hardhat run scripts/register-agent.js --network bscTestnet   # 봇 지갑 생성 + 운영자 승인 + 본드 + 에이전트 등록
 python bot/atb_bridge.py status                                  # 봇 지갑 기준 에이전트 상태
 python -m bot.access_indexer                                     # 이용권 결제 인덱싱
+python -m bot.track_record build                                 # 사이트용 공개 트랙레코드 생성 (청산 24시간 후 공개, 코인만, %만)
 ```
 테스트넷 레퍼런스 에이전트: `0x6F90de57291A757f903d70f3cACcf4e23943026F`
 

@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "generated_at": 1793899073,
+ "chain_id": 97,
+ "explorer": "https://testnet.bscscan.com",
+ "contract": "0xbb110c9F58A86622e6424B4F955aE92458BE04d8",
+ "agent": "0x6F90de57291A757f903d70f3cACcf4e23943026F",
+ "delay_hours": 24.0,
+ "fee_rate": 0.001,
+ "published_markets": [
+  "binance-futures",
+  "binance-spot",
+  "crypto"
+ ],
+ "anchor_count": 2,
+ "anchor_head": "0x77c1eb0a67492d8b3cf26e6b8234819c378c883f90279c826fcfb77683cf4422",
+ "summary": {
+  "trades": 0,
+  "wins": 0,
+  "losses": 0,
+  "win_rate_pct": null,
+  "cumulative_pct": 0.0,
+  "avg_win_pct": null,
+  "avg_loss_pct": null,
+  "max_drawdown_pct": 0.0,
+  "profit_factor": null
+ },
+ "anchors": [
+  {
+   "seq": 1,
+   "trade_hash": "0x3ad6beea8b690cebe11630f827a9454378cb2bb21494bb2d1e2c352c206537e5",
+   "tx_hash": "0x375fa16cf62e1146989c852d9648c525916b50e2504b564c50d281b330312dd5",
+   "block": 134575528,
+   "timestamp": 1791005945,
+   "status": "test",
+   "canon": "{\"market\": \"test\", \"order_id\": \"selftest-1791005944\", \"price\": 0, \"qty\": 0.001, \"side\": \"BUY\", \"symbol\": \"BTCUSDT\", \"ts\": \"2026-10-03T05:39:04Z\"}"
+  },
+  {
+   "seq": 2,
+   "trade_hash": "0xa4fbdbc7eb028e4c7dcfe07699b3fd9d267a04f34c3fb1fbc54632bdc237847d",
+   "tx_hash": "0x3dfb1a45531f266df3f5e0f7d01c494a52651429293035dab8f51cdecf6b8c0d",
+   "block": 134575537,
+   "timestamp": 1791005949,
+   "status": "test",
+   "canon": "{\"market\": \"test\", \"order_id\": \"selftest-1791005948\", \"price\": 0, \"qty\": 0.001, \"side\": \"BUY\", \"symbol\": \"BTCUSDT\", \"ts\": \"2026-10-03T05:39:08Z\"}"
+  }
+ ]
+}

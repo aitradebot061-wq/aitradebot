@@ -37,9 +37,22 @@ The first registered agent is the project's own quantitative trading stack, alre
 
 Every live fill from this stack is anchored through `anchorTrade`, giving the network its first verifiable track record before any third-party bot joins.
 
+### Public track record
+
+The site publishes the reference bot's crypto trades as a delayed, verifiable log (`bot/track_record.py` → `site/data/track-record.json`):
+
+- **Commit now, reveal later.** The hash of each fill goes on-chain at fill time. The fill itself is published only once its position has been closed for 24 hours. Open positions and recent exits show as hashes only.
+- **Not a signal.** Nothing is published while it could still be acted on, so the log is a historical record, not a trading signal, a recommendation or advice.
+- **Checked in the browser.** The page recomputes each record's sha256 and compares it with the anchored hash, rebuilds the hash chain and compares it with the on-chain `anchorHead`, and can look up every anchor in its BNB Chain transaction receipt.
+- **Percent only.** Results are per round trip, in percent of the capital that trade used, net of fees. No account size, no money amounts.
+- **Crypto only.** Fills from other markets keep their hash in the list, so the chain still verifies, but their details are withheld.
+- **Everything included.** Wins and losses alike; the hash chain makes a dropped losing trade detectable.
+
 ## 4. Token utility
 
 ATB is a utility token with three uses. It carries no profit share, no dividend, no buyback promise and no claim on revenue.
+
+**ATB is not launched.** It exists on BSC testnet only. It goes to mainnet only after the reference bot has six months of public live track record, an external audit is published and a legal review is complete. Paid plans open first, billed in USD; paying in ATB becomes an option after the token launches.
 
 1. **Access.** Bot subscriptions are priced in USD and paid in ATB via `payAccess`. 50% of every payment is burned, 50% goes to the treasury.
 2. **Bond.** Operators lock at least 1,000 ATB to register a bot and pay a 100 ATB registration fee. Bonds are slashable.
@@ -65,10 +78,12 @@ Full specification: [TOKENOMICS.md](TOKENOMICS.md). Every number is mirrored in 
 
 ## 6. Roadmap
 
-- **2026 Q4** — BSC testnet → external audit → BNB mainnet. PancakeSwap pool with 12-month LP lock. CoinMarketCap and CoinGecko listing. Reference agent starts anchoring live trades.
-- **2027 Q1** — Bot SDK (Python / TypeScript): `register`, `anchorTrade`, `payAccess`, `freeze`. Public bot leaderboard.
-- **2027 Q2** — Arbiter multisig → dispute DAO. Pause disabled forever after the audit (`disablePauseForever`).
-- **2027 Q3** — Third-party bots onboard with bonds. Verification API for other platforms.
+Each step is gated on the one before it. Dates move if a gate is not met.
+
+- **2026 Q4** — Reference agent anchors every live crypto fill on BSC testnet. Public track record on the site, published 24 hours after each position closes.
+- **2027 Q1** — Three months of live record. Free dashboard. Paid plans open, billed in USD, only if the record and user demand justify it.
+- **2027 Q2** — Six months of live record → external audit → legal review. Only then: BNB mainnet, PancakeSwap pool with 12-month LP lock, ATB as a payment option, CoinMarketCap and CoinGecko listing.
+- **Later** — Third-party bots onboard with bonds. Arbiter multisig → dispute DAO; pause disabled forever after the audit (`disablePauseForever`). Verification API for other platforms.
 
 ## 7. Governance and security
 
@@ -81,4 +96,4 @@ Full specification: [TOKENOMICS.md](TOKENOMICS.md). Every number is mirrored in 
 
 ## 8. Legal notice
 
-ATB is a utility token, not an investment product, security or deposit. AI Trade Bot does not pool, hold or manage user funds and makes no promise of return. Trading involves risk of loss. Participants are responsible for compliance with the laws of their jurisdiction, including the Republic of Korea's Virtual Asset User Protection Act.
+ATB is a utility token, not an investment product, security or deposit. AI Trade Bot does not pool, hold or manage user funds and makes no promise of return. Trading involves risk of loss. The public track record is a delayed historical log of one bot, published for verification; it is not a trading signal, a recommendation or investment advice, and past results do not predict future results. Participants are responsible for compliance with the laws of their jurisdiction, including the Republic of Korea's Virtual Asset User Protection Act.

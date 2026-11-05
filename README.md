@@ -37,11 +37,13 @@ Bridge between the quant trading stack and the contract — `guard()` before eac
 npx hardhat run scripts/register-agent.js --network bscTestnet   # bot wallet + consent + bond + registration
 python bot/atb_bridge.py status                                  # agent state from the bot wallet
 python -m bot.access_indexer                                     # index access payments
+python -m bot.track_record build                                 # public track record snapshot for the site
 ```
 Testnet reference agent: `0x6F90de57291A757f903d70f3cACcf4e23943026F`.
 
 ## Site
 `site/index.html` — static, English only (Korean documents live in `docs/ko/`), reads live counters from the contract over JSON-RPC once `ATB.token` is set.
+The "Track record" section (`site/track-record.js`) loads `site/data/track-record.json`, re-hashes every published record, checks the hash chain against on-chain `anchorHead` and can verify every anchor's transaction receipt. Fills appear 24 hours after their position closes; results are percent only, crypto only.
 
 ## Security notes
 - Unaudited until the report is published. Do not deploy to mainnet before an external audit.
